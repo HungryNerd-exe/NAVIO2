@@ -107,10 +107,10 @@ def estimator_loop(y, xh, servo):
     master.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_NOTICE, 'WARNING! LEVEL AIRCRAFT UNTIL FURTHER NOTICE!')
     time.sleep(2)
     # Give 10 seconds of warmup
-    t1 = time()
+    t1 = time.time()
     gyro = np.array([[0, 0, 0]])
     accel = np.array([[0, 0, 0]])
-    while time() - t1 < 10:
+    while time.time() - t1 < 10:
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
