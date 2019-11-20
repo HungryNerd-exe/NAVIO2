@@ -18,19 +18,18 @@ import navio2.util
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
-
 # define indices of y for easier access.
 ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z = range(9)
 pres_baro = 9
-gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d, gps_fix = range(10,17)
-adc_a0, adc_a1, adc_a2, adc_a3, adc_a4, adc_a5, est_curr_consumed, last_curr_time = range(17,25)
+gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d, gps_fix = range(10, 17)
+adc_a0, adc_a1, adc_a2, adc_a3, adc_a4, adc_a5, est_curr_consumed, last_curr_time = range(17, 25)
 pres_initial = 25
 
 # define indices of servo for easier access.
 mode_flag = 0
-rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5 = range(1,7)
-servo_0, servo_1, servo_2, servo_3, servo_4, servo_5 = range(7,13)
-throttle, aileron, elevator, rudder, none, flaps = range(7,13)
+rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5 = range(1, 7)
+servo_0, servo_1, servo_2, servo_3, servo_4, servo_5 = range(7, 13)
+throttle, aileron, elevator, rudder, none, flaps = range(7, 13)
 
 # define indices of xh for easier access.
 x, y, z, vt, alpha, beta, phi, theta, psi, p, q, r = range(12)
@@ -82,6 +81,7 @@ def initialize_gps():
 
     return ubl
 
+
 def initialize_sensors():
     print('\ninitializing sensors...')
     adc = navio2.adc.ADC()
@@ -90,7 +90,8 @@ def initialize_sensors():
     baro = navio2.ms5611.MS5611()
     baro.test()
     ubl = initialize_gps()
-    return adc,imu,baro,ubl
+    return adc, imu, baro, ubl
+
 
 def wait_heartbeat(master):
     print("waiting for heartbeat...")
@@ -99,33 +100,34 @@ def wait_heartbeat(master):
     print(msg.to_dict())
     print()
 
-def send_telemetry(y,xh,servo,master, initial_time):
 
+def send_telemetry(y, xh, servo, master, initial_time):
     # send attitude message #30
-    roll = xh[phi]                      # radians (-pi to pi)
-    pitch = xh[theta]                       # radians (-pi to pi)
-    yaw = xh[psi]                                         # radians (-pi to pi)
-    roll_speed = xh[p]                                 # radians / second
-    pitch_speed = xh[q]                             # radians / second
-    yaw_speed = xh[r]                                  # radians / second
-    time_stamp = current_milli_time()-initial_time
-    master.mav.attitude_send(time_stamp,roll,pitch,yaw,roll_speed,pitch_speed,yaw_speed)
+    roll = xh[phi]  # radians (-pi to pi)
+    pitch = xh[theta]  # radians (-pi to pi)
+    yaw = xh[psi]  # radians (-pi to pi)
+    roll_speed = xh[p]  # radians / second
+    pitch_speed = xh[q]  # radians / second
+    yaw_speed = xh[r]  # radians / second
+    time_stamp = current_milli_time() - initial_time
+    master.mav.attitude_send(time_stamp, roll, pitch, yaw, roll_speed, pitch_speed, yaw_speed)
 
     # send global_position_int message #33
     # only relative_altitude shows up in mission planner
-    latitude = 0                                    # degrees * e7
-    longitude = 0                                   # degrees * e7
-    altitude = 0                                    # millimeters
+    latitude = 0  # degrees * e7
+    longitude = 0  # degrees * e7
+    altitude = 0  # millimeters
     # relative_altitude = y[baro_pressure]/(1.13*9.8065)
     # if (y[pres_initial] != 0): relative_altitude = (10000 - y[pres_baro]/y[pres_initial]*10000)*1000
     # else: relative_altitude = 0
-    relative_altitude = -1*xh[z]
-    vx = y[gps_vel_n]                                       # centimeters / second
-    vy = y[gps_vel_e]   # TEST FOR UNITS                                    # centimeters / second
-    vz = y[gps_vel_d]                                       # centimeters / second
-    heading = 65535                                 # max value of uint16 implies unknown.
-    time_stamp = current_milli_time()-initial_time
-    master.mav.global_position_int_send(time_stamp,latitude,longitude,altitude,relative_altitude,vx,vy,vz,heading)
+    relative_altitude = -1 * xh[z]
+    vx = y[gps_vel_n]  # centimeters / second
+    vy = y[gps_vel_e]  # TEST FOR UNITS                                    # centimeters / second
+    vz = y[gps_vel_d]  # centimeters / second
+    heading = 65535  # max value of uint16 implies unknown.
+    time_stamp = current_milli_time() - initial_time
+    master.mav.global_position_int_send(time_stamp, latitude, longitude, altitude, relative_altitude, vx, vy, vz,
+                                        heading)
 
     # send vfr_hud message #74
     # air_speed = 0                                   # meters / second
@@ -137,22 +139,22 @@ def send_telemetry(y,xh,servo,master, initial_time):
     # master.mav.vfr_hud_send(air_speed,ground_speed,heading,throttle,altitude,climb_rate)
 
     # send gps_raw_int message #24
-    fix_type=y[gps_fix]
-    lat=y[gps_posn_n]              # degrees e7
-    long=y[gps_posn_e]            # -970584000
-    alt=y[gps_posn_d]              # mm
-    eph=65535
-    epv=65535
-    vel=65535
-    cog=65535
-    sat_vis=255
-    alt_ellipsoid=340000                # mm
-    h_acc=0#y[gps_h_acc]               # position uncertainty
-    v_acc=0#y[gps_v_acc]
-    vel_acc=0#12.0
-    hdg_acc=0#12.0
-    time_stamp = current_milli_time()-initial_time
-    master.mav.gps_raw_int_send(time_stamp,fix_type,lat,long,alt,eph,epv,vel,cog,sat_vis)
+    fix_type = y[gps_fix]
+    lat = y[gps_posn_n]  # degrees e7
+    long = y[gps_posn_e]  # -970584000
+    alt = y[gps_posn_d]  # mm
+    eph = 65535
+    epv = 65535
+    vel = 65535
+    cog = 65535
+    sat_vis = 255
+    alt_ellipsoid = 340000  # mm
+    h_acc = 0  # y[gps_h_acc]               # position uncertainty
+    v_acc = 0  # y[gps_v_acc]
+    vel_acc = 0  # 12.0
+    hdg_acc = 0  # 12.0
+    time_stamp = current_milli_time() - initial_time
+    master.mav.gps_raw_int_send(time_stamp, fix_type, lat, long, alt, eph, epv, vel, cog, sat_vis)
 
     # send sys_status message #1
     # sensors_present = 0
@@ -167,15 +169,15 @@ def send_telemetry(y,xh,servo,master, initial_time):
     # errors_comm = 0
     # master.mav.sys_status_send(sensors_present,sensors_enabled,sensors_health,load,voltage_battery,current_battery,battery_remaining,drop_rate_comm,errors_comm,0,0,0,0)
 
-def read_sensor(y, adc, imu, baro, ubl):
 
+def read_sensor(y, adc, imu, baro, ubl):
     # update baro data
     baro.refreshPressure()
 
     # update adc data
     for x in range(6):
-        y[adc_a0+x] = adc.read(x)    # we don't trust this data at all right now.
-    if (y[last_curr_time] != 0.): y[est_curr_consumed] += y[adc_a3]*(time.time()-y[last_curr_time])/3600.
+        y[adc_a0 + x] = adc.read(x)  # we don't trust this data at all right now.
+    if (y[last_curr_time] != 0.): y[est_curr_consumed] += y[adc_a3] * (time.time() - y[last_curr_time]) / 3600.
     y[last_curr_time] = time.time()
 
     # update imu data
@@ -195,7 +197,7 @@ def read_sensor(y, adc, imu, baro, ubl):
     while (True):
         try:
             with timer(seconds=0.001):
-        		msg = ubl.receive_message_noerror()
+                msg = ubl.receive_message_noerror()
         except:
             msg = None
         try:
@@ -221,8 +223,10 @@ def read_sensor(y, adc, imu, baro, ubl):
                 # y[gps_groundspeed] = int(str(msg).split(",")[5].split("=")[1])
                 # y[gps_heading] = int(str(msg).split(",")[6].split("=")[1])
         except:
-            if (p == s == v): break
-            else: continue
+            if (p == s == v):
+                break
+            else:
+                continue
     if (p and s and v):
         time.sleep(.003)
         baro.readPressure()
@@ -233,11 +237,12 @@ def read_sensor(y, adc, imu, baro, ubl):
         return True
     return False
 
-def servo_loop(servo):
 
+def servo_loop(servo):
     rcin = navio2.rcinput.RCInput()
 
-    with navio2.pwm.PWM(0) as pwm_0, navio2.pwm.PWM(1) as pwm_1, navio2.pwm.PWM(2) as pwm_2, navio2.pwm.PWM(3) as pwm_3, navio2.pwm.PWM(5) as pwm_5:#, navio2.pwm.PWM(4) as pwm_4:
+    with navio2.pwm.PWM(0) as pwm_0, navio2.pwm.PWM(1) as pwm_1, navio2.pwm.PWM(2) as pwm_2, navio2.pwm.PWM(
+            3) as pwm_3, navio2.pwm.PWM(5) as pwm_5:  # , navio2.pwm.PWM(4) as pwm_4:
         # rc_previous = [0.,0.,0.,0.,0.,0.]
         pwm_0.set_period(50)
         pwm_0.enable()
@@ -254,72 +259,80 @@ def servo_loop(servo):
         while True:
             initial_time = time.time()
             for x in range(6):
-                servo[rcin_0+x] = int(rcin.read(x)) / 1000.0
+                servo[rcin_0 + x] = int(rcin.read(x)) / 1000.0
             if (servo[rcin_4] < 1.250 or servo[rcin_4] > 1.750):
                 servo[mode_flag] = 0
-                #if (abs(servo[rcin_0] - rc_previous[0]) >= .02):
+                # if (abs(servo[rcin_0] - rc_previous[0]) >= .02):
                 pwm_0.set_duty_cycle(servo[rcin_0])
-                #if (abs(servo[rcin_1] - rc_previous[1]) >= .02):
+                # if (abs(servo[rcin_1] - rc_previous[1]) >= .02):
                 pwm_1.set_duty_cycle(servo[rcin_1])
-                #if (abs(servo[rcin_2] - rc_previous[2]) >= .02):
+                # if (abs(servo[rcin_2] - rc_previous[2]) >= .02):
                 pwm_2.set_duty_cycle(servo[rcin_2])
-                #if (abs(servo[rcin_3] - rc_previous[3]) >= .02):
+                # if (abs(servo[rcin_3] - rc_previous[3]) >= .02):
                 pwm_3.set_duty_cycle(servo[rcin_3])
                 # if (abs(servo[rcin_4] - rc_previous[4]) >= .02): pwm_4.set_duty_cycle(servo[rcin_4])
                 # if (abs(servo[rcin_5] - rc_previous[5]) >= .02):
                 pwm_5.set_duty_cycle(servo[rcin_5])
                 for x in range(6):
-                    servo[servo_0+x] = servo[rcin_0+x]
+                    servo[servo_0 + x] = servo[rcin_0 + x]
                     # rc_previous[x] = servo[servo_0+x]
             else:
                 servo[mode_flag] = 1
                 # set servo pwm using s[servo_0+x] from controller loop.
-                s0, s1, s2, s3, s4, s5 = servo[servo_0], servo[servo_1], servo[servo_2], servo[servo_3], servo[servo_4], servo[servo_5]
-                #if (abs(s0 - rc_previous[0]) >= .02):
+                s0, s1, s2, s3, s4, s5 = servo[servo_0], servo[servo_1], servo[servo_2], servo[servo_3], servo[servo_4], \
+                                         servo[servo_5]
+                # if (abs(s0 - rc_previous[0]) >= .02):
                 pwm_0.set_duty_cycle(s0)
-                    #rc_previous[0] = s0
-                #if (abs(s1 - rc_previous[1]) >= .02):
+                # rc_previous[0] = s0
+                # if (abs(s1 - rc_previous[1]) >= .02):
                 pwm_1.set_duty_cycle(s1)
-                    #rc_previous[1] = s1
-                #if (abs(s2 - rc_previous[2]) >= .02):
+                # rc_previous[1] = s1
+                # if (abs(s2 - rc_previous[2]) >= .02):
                 pwm_2.set_duty_cycle(s2)
-                    #rc_previous[2] = s2
-                #if (abs(s3 - rc_previous[3]) >= .02):
+                # rc_previous[2] = s2
+                # if (abs(s3 - rc_previous[3]) >= .02):
                 pwm_3.set_duty_cycle(s3)
-                    #rc_previous[3] = s3
+                # rc_previous[3] = s3
                 # if (abs(s4 - rc_previous[4]) >= .02):
                 # pwm_4.set_duty_cycle(s4)
-                    # rc_previous[4] = s4
-                #if (abs(s5 - rc_previous[5]) >= .02):
+                # rc_previous[4] = s4
+                # if (abs(s5 - rc_previous[5]) >= .02):
                 pwm_5.set_duty_cycle(s5)
-                    #rc_previous[5] = s5
-            time.sleep(max(0.005-(time.time()-initial_time),0) )
+                # rc_previous[5] = s5
+            time.sleep(max(0.005 - (time.time() - initial_time), 0))
 
-def telemetry_loop(y,xh,servo,master):
 
+def telemetry_loop(y, xh, servo, master):
     wait_heartbeat(master)
     telemetry_time = current_milli_time()
 
     # last_time = current_milli_time()
     while True:
-    	initial_time=time.time()
-        send_telemetry(y,xh,servo,master,telemetry_time)
+        initial_time = time.time()
+        send_telemetry(y, xh, servo, master, telemetry_time)
         # print("telemetry sent.")
-        time.sleep(max(0.3-(time.time()-initial_time),.2))
+        time.sleep(max(0.3 - (time.time() - initial_time), .2))
+
 
 class TimeoutError(Exception):
     pass
 
+
 import signal
+
+
 class timer:
     def __init__(self, seconds=10, error_message='Timeout'):
         self.seconds = seconds
         self.error_message = error_message
+
     def handle_timeout(self, signum, frame):
         raise TimeoutError(self.error_message)
+
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle_timeout)
         # signal.alarm(self.seconds)
-        signal.setitimer(signal.ITIMER_REAL,self.seconds)
+        signal.setitimer(signal.ITIMER_REAL, self.seconds)
+
     def __exit__(self, type, value, traceback):
         signal.alarm(0)
