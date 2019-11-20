@@ -42,10 +42,11 @@ def estimator_loop(y, xh, servo):
     print('WARNING! LEVEL AIRCRAFT UNTIL FURTHER NOTICE!')
     #Give 30 seconds of warmup
     t1 = time()
-    gyro = np.array([0 0 0])
-    while time()-t1 < 30
-        gyro = np.append(gyro, NEW_MEASUREMENTS, axis = 1)
-        sleep(0.5)
+    gyro = np.array([[0, 0, 0]])
+    while time()-t1 < 5
+        m9a, m9g, m9m = imu.getMotion9()
+        gyro = np.append(gyro, [m9g], axis = 0)
+        sleep(0.1)
 
     bias = [np.average(gyro[:,0]), np.average(gyro[:,1]), np.average(gyro[:,2])]
 

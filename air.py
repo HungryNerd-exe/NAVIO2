@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# MAE 5010 Autopilot Design airborne software libraries.
-# 3 Nov 2019, N. Baker and I. Faruque, i.faruque@okstate.edu
 
 from __future__ import print_function
 from pymavlink import mavutil
@@ -11,8 +9,8 @@ import time
 import spidev
 import navio2.lsm9ds1
 import navio2.ms5611
-# import navio2.ublox
-import ublox
+import navio2.ublox as ublox
+# import ublox
 import navio2.rcinput
 import navio2.pwm
 import navio2.adc
@@ -171,11 +169,14 @@ def send_telemetry(y,xh,servo,master, initial_time):
 
 def read_sensor(y, adc, imu, baro, ubl):
 
+    # update baro data
+    baro.refreshPressure()
+
     # update adc data
     for x in range(6):
         y[adc_a0+x] = adc.read(x)    # we don't trust this data at all right now.
-    if (y[last_curr_time] != 0.): y[est_curr_consumed] += y[adc_a3]*(current_milli_time()-y[last_curr_time])/3600000.
-    y[last_curr_time] = current_milli_time()
+    if (y[last_curr_time] != 0.): y[est_curr_consumed] += y[adc_a3]*(time.time()-y[last_curr_time])/3600.
+    y[last_curr_time] = time.time()
 
     # update imu data
     m9a, m9g, m9m = imu.getMotion9()
@@ -189,47 +190,55 @@ def read_sensor(y, adc, imu, baro, ubl):
     y[mag_y] = m9m[1]
     y[mag_z] = m9m[2]
 
-    # update baro data
-    baro.update()
-    pressure = baro.returnPressure()
-    y[pres_baro] = pressure
-    if (y[pres_initial] == 0): y[pres_initial] = pressure
-
     # update gps data
     p = s = v = False
     while (True):
-        msg = ubl.receive_message_noerror()
-        if (msg == None and p == s and s == v): break
-        if (msg == None): continue
-        if msg.name() == "NAV_POSLLH":
-            p = True
-            msg = (str(msg).split(","))
-            y[gps_posn_e] = int(msg[1].split("=")[1])
-            y[gps_posn_n] = int(msg[2].split("=")[1])
-            y[gps_posn_d] = int(msg[3].split("=")[1])
-            # y[gps_h_acc] = int(msg[5].split("=")[1])
-            # y[gps_v_acc] = int(msg[6].split("=")[1])
-        elif msg.name() == "NAV_STATUS":
-            s = True
-            y[gps_fix] = int(str(msg).split(",")[1].split("=")[1])
-        elif msg.name() == "NAV_VELNED":
-            v = True
-            msg = (str(msg).split(","))
-            y[gps_vel_n] = int(msg[1].split("=")[1])
-            y[gps_vel_e] = int(msg[2].split("=")[1])
-            y[gps_vel_d] = int(msg[3].split("=")[1])
-            # y[gps_groundspeed] = int(str(msg).split(",")[5].split("=")[1])
-            # y[gps_heading] = int(str(msg).split(",")[6].split("=")[1])
-    return (p and s and v)
+        try:
+            with timer(seconds=0.001):
+        		msg = ubl.receive_message_noerror()
+        except:
+            msg = None
+        try:
+            if (msg == None and p == s == v): break
+            if (msg == None): continue
+            if msg.name() == "NAV_POSLLH":
+                p = True
+                msg = (str(msg).split(","))
+                y[gps_posn_e] = int(msg[1].split("=")[1])
+                y[gps_posn_n] = int(msg[2].split("=")[1])
+                y[gps_posn_d] = int(msg[3].split("=")[1])
+                # y[gps_h_acc] = int(msg[5].split("=")[1])
+                # y[gps_v_acc] = int(msg[6].split("=")[1])
+            elif msg.name() == "NAV_STATUS":
+                s = True
+                y[gps_fix] = int(str(msg).split(",")[1].split("=")[1])
+            elif msg.name() == "NAV_VELNED":
+                v = True
+                msg = (str(msg).split(","))
+                y[gps_vel_n] = int(msg[1].split("=")[1])
+                y[gps_vel_e] = int(msg[2].split("=")[1])
+                y[gps_vel_d] = int(msg[3].split("=")[1])
+                # y[gps_groundspeed] = int(str(msg).split(",")[5].split("=")[1])
+                # y[gps_heading] = int(str(msg).split(",")[6].split("=")[1])
+        except:
+            if (p == s == v): break
+            else: continue
+    if (p and s and v):
+        time.sleep(.003)
+        baro.readPressure()
+        baro.calculatePressureAndTemperature()
+        y[pres_baro] = baro.returnPressure()
+        if (y[pres_initial] == 0): y[pres_initial] = y[pres_baro]
+        # print(baro.returnPressure())
+        return True
+    return False
 
 def servo_loop(servo):
 
     rcin = navio2.rcinput.RCInput()
 
-    time_sent = current_milli_time()
-
     with navio2.pwm.PWM(0) as pwm_0, navio2.pwm.PWM(1) as pwm_1, navio2.pwm.PWM(2) as pwm_2, navio2.pwm.PWM(3) as pwm_3, navio2.pwm.PWM(5) as pwm_5:#, navio2.pwm.PWM(4) as pwm_4:
-        rc_previous = [0.,0.,0.,0.,0.,0.]
+        # rc_previous = [0.,0.,0.,0.,0.,0.]
         pwm_0.set_period(50)
         pwm_0.enable()
         pwm_1.set_period(50)
@@ -243,57 +252,74 @@ def servo_loop(servo):
         pwm_5.set_period(50)
         pwm_5.enable()
         while True:
+            initial_time = time.time()
             for x in range(6):
                 servo[rcin_0+x] = int(rcin.read(x)) / 1000.0
             if (servo[rcin_4] < 1.250 or servo[rcin_4] > 1.750):
                 servo[mode_flag] = 0
-                #if (abs(servo[rcin_0] - rc_previous[0]) >= .02): 
-		pwm_0.set_duty_cycle(servo[rcin_0])
-                #if (abs(servo[rcin_1] - rc_previous[1]) >= .02): 
-		pwm_1.set_duty_cycle(servo[rcin_1])
-                #if (abs(servo[rcin_2] - rc_previous[2]) >= .02): 
-		pwm_2.set_duty_cycle(servo[rcin_2])
-                #if (abs(servo[rcin_3] - rc_previous[3]) >= .02): 
-		pwm_3.set_duty_cycle(servo[rcin_3])
+                #if (abs(servo[rcin_0] - rc_previous[0]) >= .02):
+                pwm_0.set_duty_cycle(servo[rcin_0])
+                #if (abs(servo[rcin_1] - rc_previous[1]) >= .02):
+                pwm_1.set_duty_cycle(servo[rcin_1])
+                #if (abs(servo[rcin_2] - rc_previous[2]) >= .02):
+                pwm_2.set_duty_cycle(servo[rcin_2])
+                #if (abs(servo[rcin_3] - rc_previous[3]) >= .02):
+                pwm_3.set_duty_cycle(servo[rcin_3])
                 # if (abs(servo[rcin_4] - rc_previous[4]) >= .02): pwm_4.set_duty_cycle(servo[rcin_4])
-                if (abs(servo[rcin_5] - rc_previous[5]) >= .02): pwm_5.set_duty_cycle(servo[rcin_5])
+                # if (abs(servo[rcin_5] - rc_previous[5]) >= .02):
+                pwm_5.set_duty_cycle(servo[rcin_5])
                 for x in range(6):
                     servo[servo_0+x] = servo[rcin_0+x]
-                    rc_previous[x] = servo[servo_0+x]
+                    # rc_previous[x] = servo[servo_0+x]
             else:
                 servo[mode_flag] = 1
                 # set servo pwm using s[servo_0+x] from controller loop.
                 s0, s1, s2, s3, s4, s5 = servo[servo_0], servo[servo_1], servo[servo_2], servo[servo_3], servo[servo_4], servo[servo_5]
-                if (abs(s0 - rc_previous[0]) >= .02):
-                    pwm_0.set_duty_cycle(s0)
-                    rc_previous[0] = s0
-                if (abs(s1 - rc_previous[1]) >= .02):
-                    pwm_1.set_duty_cycle(s1)
-                    rc_previous[1] = s1
-                if (abs(s2 - rc_previous[2]) >= .02):
-                    pwm_2.set_duty_cycle(s2)
-                    rc_previous[2] = s2
-                if (abs(s3 - rc_previous[3]) >= .02):
-                    pwm_3.set_duty_cycle(s3)
-                    rc_previous[3] = s3
+                #if (abs(s0 - rc_previous[0]) >= .02):
+                pwm_0.set_duty_cycle(s0)
+                    #rc_previous[0] = s0
+                #if (abs(s1 - rc_previous[1]) >= .02):
+                pwm_1.set_duty_cycle(s1)
+                    #rc_previous[1] = s1
+                #if (abs(s2 - rc_previous[2]) >= .02):
+                pwm_2.set_duty_cycle(s2)
+                    #rc_previous[2] = s2
+                #if (abs(s3 - rc_previous[3]) >= .02):
+                pwm_3.set_duty_cycle(s3)
+                    #rc_previous[3] = s3
                 # if (abs(s4 - rc_previous[4]) >= .02):
-                    # pwm_4.set_duty_cycle(s4)
+                # pwm_4.set_duty_cycle(s4)
                     # rc_previous[4] = s4
-                if (abs(s5 - rc_previous[5]) >= .02):
-                    pwm_5.set_duty_cycle(s5)
-                    rc_previous[5] = s5
+                #if (abs(s5 - rc_previous[5]) >= .02):
+                pwm_5.set_duty_cycle(s5)
+                    #rc_previous[5] = s5
+            time.sleep(max(0.005-(time.time()-initial_time),0) )
 
 def telemetry_loop(y,xh,servo,master):
 
     wait_heartbeat(master)
-    initial_time = current_milli_time()
+    telemetry_time = current_milli_time()
 
-    time_sent = 0
-    frequency = 3.0
-    period = 1000.0 / frequency
-
+    # last_time = current_milli_time()
     while True:
-        if ((current_milli_time() - time_sent + 50) >= period):
-            send_telemetry(y,xh,servo,master,initial_time)
-            time_sent = current_milli_time()
-            # print("telemetry sent.")
+    	initial_time=time.time()
+        send_telemetry(y,xh,servo,master,telemetry_time)
+        # print("telemetry sent.")
+        time.sleep(max(0.3-(time.time()-initial_time),.2))
+
+class TimeoutError(Exception):
+    pass
+
+import signal
+class timer:
+    def __init__(self, seconds=10, error_message='Timeout'):
+        self.seconds = seconds
+        self.error_message = error_message
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        # signal.alarm(self.seconds)
+        signal.setitimer(signal.ITIMER_REAL,self.seconds)
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
