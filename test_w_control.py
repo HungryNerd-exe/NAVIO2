@@ -179,7 +179,7 @@ def estimator_loop(y, xh, servo):
         R_imu = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, 1]])
 
         # >>> UJJVAL CHECK HERE
-	#print(np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]])))
+        # print(np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]])))
         a_rot = np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]]))
         ax_rot = a_rot[0] - accel_bias[0]
         ay_rot = a_rot[1] - accel_bias[1]
@@ -238,17 +238,17 @@ def estimator_loop(y, xh, servo):
         alpha = np.arctan2(w, u)
 
         xh[0] = p_n
-	xh[1] = p_e
-	xh[2] = -h_b
-	xh[3] = Vt
-	xh[4] = alpha
-	xh[5] = beta
-	xh[6] = phi_a
-	xh[7] = theta_a
-	xh[8] = psi_m
-	xh[9] = p
-	xh[10] = q
-	xh[11] = r
+        xh[1] = p_e
+        xh[2] = -h_b
+        xh[3] = Vt
+        xh[4] = alpha
+        xh[5] = beta
+        xh[6] = phi_a
+        xh[7] = theta_a
+        xh[8] = psi_m
+        xh[9] = p
+        xh[10] = q
+        xh[11] = r
 
         # ==================================================
         # Kalman Matrices
@@ -404,14 +404,14 @@ def controller_loop(xh, servo, cmd):
             if servo[rcin_1] > aileron_pwm_trim + deadband or servo[rcin_1] < aileron_pwm_trim - deadband:
                 servo[aileron] = servo[rcin_1]
             else:
-		#print('Adjust Aileron')
-		#print([xh[6], xh[6] - phi_d])
+                # print('Adjust Aileron')
+                # print([xh[6], xh[6] - phi_d])
                 # TODO: Make this smarter
                 if (xh[6] - phi_d) < -0.04:
-                    #print('Low')
-		    servo[aileron] = 1.600
+                    # print('Low')
+                    servo[aileron] = 1.600
                 elif (xh[6] - phi_d) > 0.04:
-                    #print('High')
+                    # print('High')
                     servo[aileron] = 1.400
                 else:
                     servo[aileron] = aileron_pwm_trim
