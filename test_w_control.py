@@ -370,6 +370,7 @@ def controller_loop(xh, servo, cmd):
 
             # maintain airspeed when flipped to auto
             # xh = np.array([phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, p, q, r, accel_bias, gyro_bias])
+            # x, y, z, vt, alpha, beta, phi, theta, psi, p, q, r
             u_desired = xh[6]
 
             xh_lon = np.array([xh[6], xh[8], xh[10], xh[1]])

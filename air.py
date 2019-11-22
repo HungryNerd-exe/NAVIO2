@@ -157,17 +157,17 @@ def send_telemetry(y, xh, servo, master, initial_time):
     master.mav.gps_raw_int_send(time_stamp, fix_type, lat, long, alt, eph, epv, vel, cog, sat_vis)
 
     # send sys_status message #1
-    # sensors_present = 0
-    # sensors_enabled = 0
-    # sensors_health = 0
-    # load = 0
-    # voltage_battery = int(y[adc_a2])
-    # current_battery = int(y[adc_a3]/10)
-    # battery_remaining = int(y[est_curr_consumed]/5000.*100)  # this is actually % consumed. also inaccurate.
-    # # battery_remaining = int(servo[servo_1]*100)-100
-    # drop_rate_comm = 0
-    # errors_comm = 0
-    # master.mav.sys_status_send(sensors_present,sensors_enabled,sensors_health,load,voltage_battery,current_battery,battery_remaining,drop_rate_comm,errors_comm,0,0,0,0)
+    sensors_present = 0
+    sensors_enabled = 0
+    sensors_health = 0
+    load = 0
+    voltage_battery = int(y[adc_a2])
+    current_battery = int(y[adc_a3]/10)
+    battery_remaining = int(y[est_curr_consumed]/5000.*100)  # this is actually % consumed. also inaccurate.
+    # battery_remaining = int(servo[servo_1]*100)-100
+    drop_rate_comm = 0
+    errors_comm = 0
+    master.mav.sys_status_send(sensors_present,sensors_enabled,sensors_health,load,voltage_battery,current_battery,battery_remaining,drop_rate_comm,errors_comm,0,0,0,0)
 
 
 def read_sensor(y, adc, imu, baro, ubl):
