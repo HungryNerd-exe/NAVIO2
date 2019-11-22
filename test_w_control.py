@@ -186,8 +186,8 @@ def estimator_loop(y, xh, servo):
         az_rot = a_rot[2] - accel_bias[2]
 
         # Completing angular relations
-        phi_a = np.arctan2(ay_rot, math.sqrt(ax_rot ** 2 + az_rot ** 2))  # Reliable
-        theta_a = np.arctan2(ax_rot, math.sqrt(ay_rot ** 2 + az_rot ** 2))  # Reliable
+        phi_a = -np.arctan2(ay_rot, math.sqrt(ax_rot ** 2 + az_rot ** 2))  # Reliable
+        theta_a = -np.arctan2(ax_rot, math.sqrt(ay_rot ** 2 + az_rot ** 2))  # Reliable
         # psi_a = np.arctan2(math.sqrt(ax_rot**2+ay_rot**2), az_rot**2)     # Unreliable
 
         # Get Psi from Magnetometer
