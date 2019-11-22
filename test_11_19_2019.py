@@ -114,11 +114,19 @@ def estimator_loop(y, xh, servo):
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
-        time.sleep(0.1)
+        time.sleep(0.05)
     gyro_bias = [np.average(gyro[:, 0]), np.average(gyro[:, 1]), np.average(gyro[:, 2])]
     accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])]
 
     # >>> ADD IN COVARIANCE
+    #sampled_data = np.array([[np.transpose(gyro[:,0])],
+    #                         [np.transpose(gyro[:,0])],
+    #                         [np.transpose(gyro[:,0])],
+    #                         [np.transpose(accel[:,0])],
+    #                         [np.transpose(accel[:,0])],
+    #                         [np.transpose(accel[:,0])],
+    #                         [np.transpose(accel[:,0])]]
+    R = np.cov(sampled_data)
 
     accel = 0  # Free memory
     gyro = 0  # Free memory
