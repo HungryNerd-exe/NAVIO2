@@ -407,12 +407,12 @@ def controller_loop(xh, servo, cmd):
                 # print('Adjust Aileron')
                 # print([xh[6], xh[6] - phi_d])
                 # TODO: Make this smarter
-                if (xh[6] - phi_d) < -0.04:
+                if (xh[6] - phi_d) < -0.07:
                     # print('Low')
-                    servo[aileron] = 1.600
-                elif (xh[6] - phi_d) > 0.04:
+                    servo[aileron] = 1.650
+                elif (xh[6] - phi_d) > 0.07:
                     # print('High')
-                    servo[aileron] = 1.400
+                    servo[aileron] = 1.350
                 else:
                     servo[aileron] = aileron_pwm_trim
             if servo[rcin_2] > elevator_pwm_trim + deadband or servo[rcin_2] < elevator_pwm_trim - deadband:
