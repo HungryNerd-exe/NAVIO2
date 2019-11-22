@@ -205,7 +205,7 @@ def estimator_loop(y, xh, servo):
         # >>> UJJVAL CHECK HERE
         q = y[gyro_p] - gyro_bias[0]
         p = y[gyro_q] - gyro_bias[1]
-        r = -(y[gyro_r] - gyro_bias[2])
+        r = y[gyro_r] - gyro_bias[2]
 
         if new_gps:
             [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
