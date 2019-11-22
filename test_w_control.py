@@ -24,7 +24,7 @@ def current_milli_time(): return int(round(time.time() * 1000))
 
 
 # define indices of xh for easier access.
-x, y, z, vt, alpha, beta, phi, theta, psi, p, q, r = range(12)
+#p_n, , vt, alpha, beta, phi, theta, psi, p, q, r = range(12) # Unused -BRANDON
 
 # define indices of y for easier access.
 ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z = range(9)
@@ -48,7 +48,7 @@ def estimator_loop(y, xh, servo):
     #Initialize Variables
     ax_rot = ay_rot = az_rot = 0
     v_n_old = v_e_old = v_d_old = 0
-    x = y = z = 0
+    p_n = p_e = p_d = 0
     u = v = w = 0
     v_n = v_e = v_d = 0
     v_n_dot = v_e_dot = v_d_dot = 0
@@ -209,7 +209,7 @@ def estimator_loop(y, xh, servo):
 
         if new_gps:
             [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
-            [x, y, z, v_n, v_e, v_d] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_e],
+            [p_n, p_e, p_d, v_n, v_e, v_d] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_e],
                                         y[gps_vel_d]]
             delta_t = round(time.time() - t1, 3)
             t1 = time.time()
