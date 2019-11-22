@@ -228,7 +228,8 @@ def estimator_loop(y, xh, servo):
             #INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
             #UPDATED WITH ROTATION MATRIX
-        xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, p, q, r, accel_bias[0], accel_bias[1] ,accel_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]])
+	Vt = np.sqrt(u**2 + v**2 + w**2)
+        xh = np.array([p_n, p_e, -h_b, Vt, np.rad2deg(np.arctan2(w, u)), np.rad2deg(np.arctan2(v. Vt)), phi_a, theta_a, psi_m, p, q, r])
 
         # ==================================================
         # Kalman Matrices
