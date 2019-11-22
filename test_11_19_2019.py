@@ -10,7 +10,7 @@ import os
 import time
 from datetime import datetime
 from math import sin, cos, tan
-
+import numpy
 import numpy as np
 from pymavlink import mavutil
 
@@ -114,19 +114,11 @@ def estimator_loop(y, xh, servo):
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
-        time.sleep(0.05)
+        time.sleep(0.1)
     gyro_bias = [np.average(gyro[:, 0]), np.average(gyro[:, 1]), np.average(gyro[:, 2])]
     accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])]
 
     # >>> ADD IN COVARIANCE
-    #sampled_data = np.array([[np.transpose(gyro[:,0])],
-    #                         [np.transpose(gyro[:,0])],
-    #                         [np.transpose(gyro[:,0])],
-    #                         [np.transpose(accel[:,0])],
-    #                         [np.transpose(accel[:,0])],
-    #                         [np.transpose(accel[:,0])],
-    #                         [np.transpose(accel[:,0])]]
-    R = np.cov(sampled_data)
 
     accel = 0  # Free memory
     gyro = 0  # Free memory
@@ -198,29 +190,41 @@ def estimator_loop(y, xh, servo):
         p = y[gyro_p] - gyro_bias[0]
         q = y[gyro_q] - gyro_bias[1]
         r = y[gyro_r] - gyro_bias[2]
+        
+        
 
-        if new_gps:
-            [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
-            [x, y, z, v_n, v_e, v_d] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_e],
-                                        y[gps_vel_d]]
-            delta_t = round(time.time() - t1, 3)
-            t1 = time.time()
-            try:
-                [v_n_dot, v_e_dot, v_d_dot] = ([v_n, v_e, v_d] - [v_n_old, v_e_old, v_d_old]) / delta_t
-            except:
-                [v_n_dot, v_e_dot, v_d_dot] = [0, 0, 0]
-
+       
         # TODO: need to define x without GPS. Initialize as zero before loop? -Charlie
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
-        xh = np.array([phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, accel_bias, gyro_bias])
+        xh = np.array([phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, p, q, r])
 
         # ==================================================
         # Kalman Matrices
         # POC: Ujjval
 
         # Create F Matix
-        F = F_Find(xh, [y[ax], y[ay], y[az], y[gyro_p], y[gyro_q], y[gyro_r]])
-
+        F = F_Find(xh, [y[ax], y[ay], y[az], y[gyro_p], y[gyro_q], y[gyro_r],y[mag_x],y[mag_y],y[mag_z]])
+        [xminus,Pminus] = priori(xh,P,F,Q)
+       
+        if new_gps:
+           [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
+           [xn[3], xn[4], xn[5], xn[6], xn[7], xn[8]] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_e],
+                                       y[gps_vel_d]]
+           delta_t = round(time.time() - t1, 3)
+           t1 = time.time()
+           zn = [y[ax], y[ay], y[az], psi, y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gyro_p], y[gyro_q], y[gyro_r]] 
+            # z_hat = [ax,ay,az, psi , x, y, z, V_n, V_e, V_d, p, q, r]
+           H = H_Find_INS(xh,zn)
+           [xhat,P] = posteriori(xhatminus, Pminus,zn,H,R)
+           try:
+               [v_n_dot, v_e_dot, v_d_dot] = ([v_n, v_e, v_d] - [v_n_old, v_e_old, v_d_old]) / delta_t
+           except:
+               [v_n_dot, v_e_dot, v_d_dot] = [0, 0, 0]
+        else:
+            zn = [y[ax], y[ay], y[az], psi, y[gyro_p], y[gyro_q], y[gyro_r]] # z_hat = [fx,fy,fz,psi,p,q,r]
+            H = H_Find_AHRS(xh,zn)
+            [xhat,P] = posteriori(xhatminus, Pminus,zn,H,R)
+        
         # Create H Matix
         # >>> TBD by UJJVAL
         # H = H_Find(xh, [y[ax], y[ay], y[az], y[gyro_p], y[gyro_q], y[gyro_r]])
@@ -232,16 +236,15 @@ def estimator_loop(y, xh, servo):
         # ALL CODE ABOVE THIS LINE
         # ==================================================
         # DONE: Log X Hat, Servos, RCs, Y to CSV
+        
+        >>> #Rotate p,q,r from body to fixed frame to log if you want.
         f_logfile.write(', '.join(map(str, xh)) + ', '.join(map(str, servo)) + ', '.join(map(str, y)) + '\n')
         # >>> TDB
 
 
 def F_Find(xh, sn):
-    # MONOLITH 1: UJJVAL KNOWS All
-    # MONOLITH 2: THIS IS CORRECT
-
     # Using Matlab's Partial Differentation.
-    # x_hat = [ phi, theta, psi, x, y, z, V_n, V_e, V_d, bwx, bwy, bwz, bax, bay, baz]
+    # x_hat = [ phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r]
     # All Angles in RADIANS!
 
     phi = xh[0]
@@ -253,72 +256,189 @@ def F_Find(xh, sn):
     V_n = xh[6]
     V_e = xh[7]
     V_d = xh[8]
-    bwx = xh[9]
-    bwy = xh[10]
-    bwz = xh[11]
-    bax = xh[12]
-    bay = xh[13]
-    baz = xh[14]
+    p   = xh[9]
+    q   = xh[10]
+    r   = xh[11]
+ 
 
-    # Sensor Data sn = [fx,fy,fz,wx,wy,wz]
+    # Sensor Data sn = [fx,fy,fz,wx,wy,wz,bx,by,bz]
 
-    fx = sn[0]
+    fx = sn[0] #Accelerometer
     fy = sn[1]
     fz = sn[2]
-    wx = sn[3]
+    wx = sn[3] #Gyro 
     wy = sn[4]
     wz = sn[5]
+    bx = sn[6] #Magentometer
+    by = sn[7]
+    bz = sn[8]
 
-    wx_cb = -1 * (wx - bwx)
-    wy_cb = -1 * (wy - bwy)
-    wz_cb = -1 * (wz - bwz)
-    ax_cb = -1 * (fx - bax)
-    ay_cb = -1 * (fy - bay)
-    az_cb = -1 * (fz - baz)
+    wx_cb = -1 * wx
+    wy_cb = -1 * wy
+    wz_cb = -1 * wz
+    ax_cb = -1 * fx 
+    ay_cb = -1 * fy
+    az_cb = -1 * fz 
 
     F = np.array([[sin(phi) * tan(theta) * (wz_cb) - cos(phi) * tan(theta) * wy_cb,
-                   - cos(phi) * (wz_cb) * (tan(theta) ** 2 + 1) - sin(phi) * (wy_cb) * (tan(theta) ** 2 + 1), 0, 0, 0,
-                   0, 0, 0, 0,
-                   -1, -sin(phi) * tan(theta), -cos(phi) * tan(theta), 0, 0, 0],
-                  [cos(phi) * (wz_cb) + sin(phi) * (wy_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0, -cos(phi), sin(phi), 0, 0, 0],
-                  [(sin(phi) * (wz_cb)) / cos(theta) - (cos(phi) * (wy_cb)) / cos(theta),
-                   - (cos(phi) * sin(theta) * (wz_cb)) / cos(theta) ** 2 - (sin(phi) * sin(theta) * (wy_cb)) / cos(
-                       theta) ** 2, 0,
-                   0, 0, 0, 0, 0, 0, 0, -sin(phi) / cos(theta), -cos(phi) / cos(theta), 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0],
-                  [- (sin(phi) * sin(psi) + cos(phi) * cos(psi) * sin(theta)) * (ay_cb) - (
-                          cos(phi) * sin(psi) - cos(psi) * sin(phi) * sin(theta)) * (az_cb),
-                   cos(psi) * sin(theta) * (ax_cb) - cos(phi) * cos(psi) * cos(theta) * (az_cb) - cos(psi) * cos(
-                       theta) * sin(
-                       phi) * (ay_cb), (cos(phi) * cos(psi) + sin(phi) * sin(psi) * sin(theta)) * (ay_cb) - (
-                           cos(psi) * sin(phi) - cos(phi) * sin(psi) * sin(theta)) * (az_cb) + cos(theta) * sin(psi) * (
-                       ax_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0, -cos(psi) * cos(theta),
-                   cos(phi) * sin(psi) - cos(psi) * sin(phi) * sin(theta),
-                   - sin(phi) * sin(psi) - cos(phi) * cos(psi) * sin(theta)],
-                  [(cos(psi) * sin(phi) - cos(phi) * sin(psi) * sin(theta)) * (ay_cb) + (
-                          cos(phi) * cos(psi) + sin(phi) * sin(psi) * sin(theta)) * (az_cb),
-                   sin(psi) * sin(theta) * (ax_cb) - cos(phi) * cos(theta) * sin(psi) * (az_cb) - cos(theta) * sin(
-                       phi) * sin(
-                       psi) * (ay_cb), (cos(phi) * sin(psi) - cos(psi) * sin(phi) * sin(theta)) * (ay_cb) - (
-                           sin(phi) * sin(psi) + cos(phi) * cos(psi) * sin(theta)) * (az_cb) - cos(psi) * cos(theta) * (
-                       ax_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0, -cos(theta) * sin(psi),
-                   - cos(phi) * cos(psi) - sin(phi) * sin(psi) * sin(theta),
-                   cos(psi) * sin(phi) - cos(phi) * sin(psi) * sin(theta)],
-                  [cos(theta) * sin(phi) * (az_cb) - cos(phi) * cos(theta) * (ay_cb),
-                   cos(theta) * (ax_cb) + cos(phi) * sin(theta) * (az_cb) + sin(phi) * sin(theta) * (ay_cb), 0, 0, 0, 0,
-                   0, 0, 0,
-                   0, 0, 0, sin(theta), -cos(theta) * sin(phi), -cos(phi) * cos(theta)],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+          - cos(phi) * (wz_cb) * (tan(theta) ** 2 + 1) - sin(phi) * (wy_cb) * (tan(theta) ** 2 + 1), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [cos(phi) * (wz_cb) + sin(phi) * (wy_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [(sin(phi) * (wz_cb)) / cos(theta) - (cos(phi) * (wy_cb)) / cos(theta),
+          - (cos(phi) * sin(theta) * (wz_cb)) / cos(theta) ** 2 - (sin(phi) * sin(theta) * (wy_cb)) / cos(theta) ** 2, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0,],
+         [- (sin(phi) * sin(psi) + cos(phi) * cos(psi) * sin(theta)) * (ay_cb) - (
+                     cos(phi) * sin(psi) - cos(psi) * sin(phi) * sin(theta)) * (az_cb),
+          cos(psi) * sin(theta) * (ax_cb) - cos(phi) * cos(psi) * cos(theta) * (az_cb) - cos(psi) * cos(theta) * sin(
+              phi) * (ay_cb), (cos(phi) * cos(psi) + sin(phi) * sin(psi) * sin(theta)) * (ay_cb) - (
+                      cos(psi) * sin(phi) - cos(phi) * sin(psi) * sin(theta)) * (az_cb) + cos(theta) * sin(psi) * (
+              ax_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [(cos(psi) * sin(phi) - cos(phi) * sin(psi) * sin(theta)) * (ay_cb) + (
+                     cos(phi) * cos(psi) + sin(phi) * sin(psi) * sin(theta)) * (az_cb),
+          sin(psi) * sin(theta) * (ax_cb) - cos(phi) * cos(theta) * sin(psi) * (az_cb) - cos(theta) * sin(phi) * sin(
+              psi) * (ay_cb), (cos(phi) * sin(psi) - cos(psi) * sin(phi) * sin(theta)) * (ay_cb) - (
+                      sin(phi) * sin(psi) + cos(phi) * cos(psi) * sin(theta)) * (az_cb) - cos(psi) * cos(theta) * (
+              ax_cb), 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [cos(theta) * sin(phi) * (az_cb) - cos(phi) * cos(theta) * (ay_cb),
+          cos(theta) * (ax_cb) + cos(phi) * sin(theta) * (az_cb) + sin(phi) * sin(theta) * (ay_cb), 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     return F
 
+def H_Find_INS(xh,zh):
+    # Using Matlab's Partial Differentation.
+    # z_hat = [fx,fy,fz, psi , x, y, z, V_n, V_e, V_d, p, q, r]
+    # x_hat = [ phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r]
+    # All Angles in RADIANS!
 
+    phi = xh[0]
+    theta = xh[1]
+    psi = xh[2]
+    x = xh[3]
+    y = xh[4]
+    z = xh[5]
+    V_n = xh[6]
+    V_e = xh[7]
+    V_d = xh[8]
+    p   = xh[9]
+    q   = xh[10]
+    r   = xh[11]
+ 
+
+    # Sensor Data sn = [fx,fy,fz,wx,wy,wz,bx,by,bz]
+
+    fx = sn[0] #Accelerometer
+    fy = sn[1]
+    fz = sn[2]
+    wx = sn[3] #Gyro 
+    wy = sn[4]
+    wz = sn[5]
+    bx = sn[6] #Magentometer
+    by = sn[7]
+    bz = sn[8]
+
+    wx_cb = -1 * wx 
+    wy_cb = -1 * wy 
+    wz_cb = -1 * wz 
+    ax_cb = -1 * fx 
+    ay_cb = -1 * fy
+    az_cb = -1 * fz
+    
+    H = np.array([[ 0,   g*cos(theta),   0,  0,  0,  0,  0, 0,  0,  0,  V_d,  V_e],
+        [ -g*cos(phi)*cos(theta),   g*sin(phi)*sin(theta),  0, 0,  0,  0,  0,  0,  0,  -V_d,  0,  -V_n],
+        [g*cos(theta)*sin(phi),g*cos(phi)*sin(theta), 0, 0, 0, 0,  0,  0, 0, 0,V_e,V_n,0],
+        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+    return H
+
+def H_Find_AHRS(xh,zh):
+    # Using Matlab's Partial Differentation.
+    # z_hat = [fx,fy,fz,psi,p,q,r]
+    # x_hat = [ phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r]
+    # Sensor Data sn = [fx,fy,fz,wx,wy,wz,bx,by,bz]
+    # All Angles in RADIANS!
+
+	phi = xh[0]
+    theta = xh[1]
+    psi = xh[2]
+    x = xh[3]
+    y = xh[4]
+    z = xh[5]
+    V_n = xh[6]
+    V_e = xh[7]
+    V_d = xh[8]
+    p   = xh[9]
+    q   = xh[10]
+    r   = xh[11]
+ 
+
+    # Sensor Data sn = [fx,fy,fz,wx,wy,wz,bx,by,bz]
+
+    fx = sn[0] #Accelerometer
+    fy = sn[1]
+    fz = sn[2]
+    wx = sn[3] #Gyro 
+    wy = sn[4]
+    wz = sn[5]
+    bx = sn[6] #Magentometer
+    by = sn[7]
+    bz = sn[8]
+
+    wx_cb = -1 * wx
+    wy_cb = -1 * wy
+    wz_cb = -1 * wz 
+    ax_cb = -1 * fx 
+    ay_cb = -1 * fy 
+    az_cb = -1 * fz
+    
+    H = np.array([[ 0,   g*cos(theta),   0,  0,  0,  0,  0, 0,  0,  0,  V_d,  V_e],
+    [ -g*cos(phi)*cos(theta),   g*sin(phi)*sin(theta),  0, 0,  0,  0,  0,  0,  0,  -V_d,  0,  -V_n],
+    [g*cos(theta)*sin(phi),g*cos(phi)*sin(theta), 0, 0, 0, 0,  0,  0, 0, 0,V_e,V_n,0],
+    [0,0,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,0,0],
+    [0,0,0,0,0,0,0,0,0,0,1,0],
+    [0,0,0,0,0,0,0,0,0,0,0,1]])
+    return H
+
+
+def priori(xh,P,F,Q):
+    # do not forget to initialize xh and P.
+    FT = F.T
+    Pminus = np.dot(np.dot(F,P),FT)
+    xhatminus = np.dot(F,xh)
+    
+    return xhatminus, Pminus
+
+def posteriori(xhatminus, Pminus,zn,H,R):
+
+        ss = len(xhatminus) # state space size
+        HT = H.T
+        # calculate Kalman gain
+        Knumerator = dot(Pminus,HT)
+        Kdenominator = dot(dot(H,Pminus),HT)+R
+        K = dot(Knumerator,np.linalg.inv(Kdenominator)) # Kalman gain
+
+        residuals = y-dot(H,xhatminus)
+        xhat = xhatminus+dot(K, residuals)
+        one_minus_KC = numpy.eye(ss)-dot(K,C)
+
+        # compute a posteriori estimate of errors
+        P = dot(one_minus_KC,Pminus)
+        
+        return xhat, P
+    
 def controller_loop(xh, servo, cmd):
     while True:
         if (servo[mode_flag] == 1):
