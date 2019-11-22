@@ -149,7 +149,7 @@ def estimator_loop(y, xh, servo):
     date_time = now.strftime('%y_%m_%d__%H_%M_%S')
     os.chdir('/home/pi/')
     f_logfile = open('log_' + date_time + '.csv', 'w+')
-    est_log_string = 'phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, a_bias_x, a_bias_y, a_bias_z, gyro_bias_x, gyro_bias_y, gyro_bias_z, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_q, gyro_p, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
+    est_log_string = 'p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_q, gyro_p, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
     f_logfile.write(est_log_string)
     # ==========================================================================
 
@@ -233,9 +233,9 @@ def estimator_loop(y, xh, servo):
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
         # UPDATED WITH ROTATION MATRIX
         Vt = np.sqrt(u ** 2 + v ** 2 + w ** 2)
-        xh = np.array(
-            [p_n, p_e, -h_b, Vt, np.rad2deg(np.arctan2(w, u)), np.rad2deg(np.arctan2(v, Vt)), phi_a, theta_a, psi_m, p,
-             q, r])
+        beta = np.rad2deg(np.arctan2(v, Vt))
+        alpha = np.rad2deg(np.arctan2(w, u))
+        xh = np.array([p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r])
 
         # ==================================================
         # Kalman Matrices
