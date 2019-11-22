@@ -132,7 +132,7 @@ def estimator_loop(y, xh, servo):
     #                         [np.transpose(accel[:,0])],
     #                         [np.transpose(accel[:,0])],
     #                         [np.transpose(accel[:,0])]]
-    R = np.cov(sampled_data)
+    #R = np.cov(sampled_data)
 
     accel = 0  # Free memory
     gyro = 0  # Free memory
