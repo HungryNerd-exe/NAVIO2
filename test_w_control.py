@@ -116,7 +116,7 @@ def estimator_loop(y, xh, servo):
     t1 = time.time()
     gyro = np.array([[0, 0, 0]])
     accel = np.array([[0, 0, 0]])
-    while time.time() - t1 < 10:
+    while time.time() - t1 < 5:
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
