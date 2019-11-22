@@ -149,7 +149,7 @@ def estimator_loop(y, xh, servo):
     date_time = now.strftime('%y_%m_%d__%H_%M_%S')
     os.chdir('/home/pi/')
     f_logfile = open('log_' + date_time + '.csv', 'w+')
-    est_log_string = 'p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_q, gyro_p, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
+    est_log_string = 'p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, rcin_6, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_q, gyro_p, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
     f_logfile.write(est_log_string)
     # ==========================================================================
 
@@ -179,7 +179,7 @@ def estimator_loop(y, xh, servo):
         R_imu = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, 1]])
 
         # >>> UJJVAL CHECK HERE
-	print(np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]])))
+	#print(np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]])))
         a_rot = np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]]))
         ax_rot = a_rot[0] - accel_bias[0]
         ay_rot = a_rot[1] - accel_bias[1]
