@@ -233,8 +233,8 @@ def estimator_loop(y, xh, servo):
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
         # UPDATED WITH ROTATION MATRIX
         Vt = np.sqrt(u ** 2 + v ** 2 + w ** 2)
-        beta = np.rad2deg(np.arctan2(v, Vt))
-        alpha = np.rad2deg(np.arctan2(w, u))
+        beta = np.arctan2(v, Vt)
+        alpha = np.arctan2(w, u)
         xh = np.array([p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r])
 
         # ==================================================
