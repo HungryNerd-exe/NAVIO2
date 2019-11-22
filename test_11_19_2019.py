@@ -321,6 +321,7 @@ def F_Find(xh, sn):
 
 def controller_loop(xh, servo, cmd):
     while True:
+        
         if (servo[mode_flag] == 1):
             pass  # rewrite servo_out values to servo array based on their previous values and xh.
             # if (servo[servo_1]<1.5): servo[servo_1] = 1.55
