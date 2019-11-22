@@ -45,6 +45,12 @@ def estimator_loop(y, xh, servo):
     # get sensors for read_sensor function call.
     adc, imu, baro, ubl = air.initialize_sensors()
 
+    #Initialize Variables
+    ax_rot = ay_rot = az_rot = 0
+    v_n_old = v_e_old = v_d_old = 0
+    x = y = z = v_n = v_e = v_d = 0
+    v_n_dot = v_e_dot = v_d_dot = 0
+
     A = [[-0.028, 0.233, 0, -9.815, 0, 0, 0, 0, 0, 0, 0, 0],
          [-0.978, -8.966, 20.1170, 0, 0, 0, 0, 0, 0, 0, 0, 0],
          [0.102, 0.022, -6.102, 0, 0, 0, 0, 0, 0, 0, 0, 0],
