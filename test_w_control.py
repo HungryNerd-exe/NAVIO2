@@ -219,7 +219,7 @@ def estimator_loop(y, xh, servo):
                 [v_n_dot, v_e_dot, v_d_dot] = [0, 0, 0]
 
             Rbf = np.array([[cos(theta_a)*cos(psi_m), cos(theta_a)*sin(psi_m), -sin(theta_a)],
-                            [sin(phi_a)*sin(theta_a)*cos(psi_m) - cos(phi_a)*sin(psi_m), sin(phi_a)*sin(theta_a)*sin(psi_m) + cos(phi_a)*cos(psi_m), sin(phi_a)*cos(theta_a)]
+                            [sin(phi_a)*sin(theta_a)*cos(psi_m) - cos(phi_a)*sin(psi_m), sin(phi_a)*sin(theta_a)*sin(psi_m) + cos(phi_a)*cos(psi_m), sin(phi_a)*cos(theta_a)],
                             [cos(phi_a)*sin(theta_a)*cos(psi_m) + sin(phi_a)*sin(psi_m), cos(phi_a)*sin(theta_a)*sin(psi_m) - sin(phi_a)*cos(psi_m), cos(phi_a)*cos(theta_a)]])
 
             [u, v, w][0] = np.dot(Rbf, np.array([[v_n], [v_e], [v_d]]))
@@ -228,18 +228,7 @@ def estimator_loop(y, xh, servo):
             #INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
             #UPDATED WITH ROTATION MATRIX
-        print(phi_a)
-        print(theta_a)
-        print(psi_m)
-        print(p_n)
-        print(p_e)
-        print(-h_b)
-        print(u)
-        print(v)
-        print(w)
-        print(accel_bias)
-        print(gyro_bias)
-        xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, accel_bias, gyro_bias])
+        xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, accel_bias[0], accel_bias[1] ,accel_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]])
 
         # ==================================================
         # Kalman Matrices
