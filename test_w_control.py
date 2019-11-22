@@ -236,7 +236,19 @@ def estimator_loop(y, xh, servo):
         Vt = np.sqrt(u ** 2 + v ** 2 + w ** 2)
         beta = np.arctan2(v, Vt)
         alpha = np.arctan2(w, u)
-        xh = np.array([p_n, p_e, -h_b, Vt, alpha, beta, phi_a, theta_a, psi_m, p, q, r])
+
+        xh[0] = p_n
+	xh[1] = p_e
+	xh[2] = -h_b
+	xh[3] = Vt
+	xh[4] = alpha
+	xh[5] = beta
+	xh[6] = phi_a
+	xh[7] = theta_a
+	xh[8] = psi_m
+	xh[9] = p
+	xh[10] = q
+	xh[11] = r
 
         # ==================================================
         # Kalman Matrices
@@ -345,7 +357,7 @@ def F_Find(xh, sn):
 
 
 def controller_loop(xh, servo, cmd):
-    deadband = 0.020
+    deadband = 0.1
 
     u_desired = None
 
@@ -392,10 +404,14 @@ def controller_loop(xh, servo, cmd):
             if servo[rcin_1] > aileron_pwm_trim + deadband or servo[rcin_1] < aileron_pwm_trim - deadband:
                 servo[aileron] = servo[rcin_1]
             else:
+		#print('Adjust Aileron')
+		#print([xh[6], xh[6] - phi_d])
                 # TODO: Make this smarter
-                if (xh[0] - phi_d) < -2:
-                    servo[aileron] = 1.600
-                elif (xh[0] - phi_d) > 2:
+                if (xh[6] - phi_d) < -0.04:
+                    #print('Low')
+		    servo[aileron] = 1.600
+                elif (xh[6] - phi_d) > 0.04:
+                    #print('High')
                     servo[aileron] = 1.400
                 else:
                     servo[aileron] = aileron_pwm_trim
@@ -404,7 +420,7 @@ def controller_loop(xh, servo, cmd):
             else:
                 pass  # do stabilize
             if servo[rcin_3] > rudder_pwm_trim + deadband or servo[rcin_3] < rudder_pwm_trim - deadband:
-                servo[rudder] = servo[rcin_2]
+                servo[rudder] = servo[rcin_3]
             else:
                 pass  # do stabilize
 
