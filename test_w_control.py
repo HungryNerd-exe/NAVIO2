@@ -228,6 +228,17 @@ def estimator_loop(y, xh, servo):
             #INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
             #UPDATED WITH ROTATION MATRIX
+        print(phi_a)
+        print(theta_a)
+        print(psi_m)
+        print(p_n)
+        print(p_e)
+        print(-h_b)
+        print(u)
+        print(v)
+        print(w)
+        print(accel_bias)
+        print(gyro_bias)
         xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, accel_bias, gyro_bias])
 
         # ==================================================
