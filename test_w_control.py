@@ -24,7 +24,7 @@ def current_milli_time(): return int(round(time.time() * 1000))
 
 
 # define indices of xh for easier access.
-#p_n, , vt, alpha, beta, phi, theta, psi, p, q, r = range(12) # Unused -BRANDON
+# p_n, , vt, alpha, beta, phi, theta, psi, p, q, r = range(12) # Unused -BRANDON
 
 # define indices of y for easier access.
 ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z = range(9)
@@ -45,7 +45,7 @@ def estimator_loop(y, xh, servo):
     # get sensors for read_sensor function call.
     adc, imu, baro, ubl = air.initialize_sensors()
 
-    #Initialize Variables
+    # Initialize Variables
     ax_rot = ay_rot = az_rot = 0
     v_n_old = v_e_old = v_d_old = 0
     p_n = p_e = p_d = 0
@@ -124,17 +124,17 @@ def estimator_loop(y, xh, servo):
         gyro = np.append(gyro, [m9g], axis=0)
         time.sleep(0.05)
     gyro_bias = [np.average(gyro[:, 0]), np.average(gyro[:, 1]), np.average(gyro[:, 2])]
-    accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])-9.8]
+    accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2]) - 9.8]
 
     # >>> ADD IN COVARIANCE
-    #sampled_data = np.array([[np.transpose(gyro[:,0])],
+    # sampled_data = np.array([[np.transpose(gyro[:,0])],
     #                         [np.transpose(gyro[:,0])],
     #                         [np.transpose(gyro[:,0])],
     #                         [np.transpose(accel[:,0])],
     #                         [np.transpose(accel[:,0])],
     #                         [np.transpose(accel[:,0])],
     #                         [np.transpose(accel[:,0])]]
-    #R = np.cov(sampled_data)
+    # R = np.cov(sampled_data)
 
     accel = 0  # Free memory
     gyro = 0  # Free memory
@@ -210,7 +210,7 @@ def estimator_loop(y, xh, servo):
         if new_gps:
             [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
             [p_n, p_e, p_d, v_n, v_e, v_d] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_e],
-                                        y[gps_vel_d]]
+                                              y[gps_vel_d]]
             delta_t = round(time.time() - t1, 3)
             t1 = time.time()
             try:
@@ -218,18 +218,24 @@ def estimator_loop(y, xh, servo):
             except:
                 [v_n_dot, v_e_dot, v_d_dot] = [0, 0, 0]
 
-            Rbf = np.array([[cos(theta_a)*cos(psi_m), cos(theta_a)*sin(psi_m), -sin(theta_a)],
-                            [sin(phi_a)*sin(theta_a)*cos(psi_m) - cos(phi_a)*sin(psi_m), sin(phi_a)*sin(theta_a)*sin(psi_m) + cos(phi_a)*cos(psi_m), sin(phi_a)*cos(theta_a)],
-                            [cos(phi_a)*sin(theta_a)*cos(psi_m) + sin(phi_a)*sin(psi_m), cos(phi_a)*sin(theta_a)*sin(psi_m) - sin(phi_a)*cos(psi_m), cos(phi_a)*cos(theta_a)]])
+            Rbf = np.array([[cos(theta_a) * cos(psi_m), cos(theta_a) * sin(psi_m), -sin(theta_a)],
+                            [sin(phi_a) * sin(theta_a) * cos(psi_m) - cos(phi_a) * sin(psi_m),
+                             sin(phi_a) * sin(theta_a) * sin(psi_m) + cos(phi_a) * cos(psi_m),
+                             sin(phi_a) * cos(theta_a)],
+                            [cos(phi_a) * sin(theta_a) * cos(psi_m) + sin(phi_a) * sin(psi_m),
+                             cos(phi_a) * sin(theta_a) * sin(psi_m) - sin(phi_a) * cos(psi_m),
+                             cos(phi_a) * cos(theta_a)]])
 
             [u, v, w][0] = np.dot(Rbf, np.array([[v_n], [v_e], [v_d]]))
 
         # XTODO: need to define x without GPS. Initialize as zero before loop? -Charlie
-            #INITIALIZED BEFORE LOOP - BRANDON
+        # INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
-            #UPDATED WITH ROTATION MATRIX
-	Vt = np.sqrt(u**2 + v**2 + w**2)
-        xh = np.array([p_n, p_e, -h_b, Vt, np.rad2deg(np.arctan2(w, u)), np.rad2deg(np.arctan2(v. Vt)), phi_a, theta_a, psi_m, p, q, r])
+        # UPDATED WITH ROTATION MATRIX
+        Vt = np.sqrt(u ** 2 + v ** 2 + w ** 2)
+        xh = np.array(
+            [p_n, p_e, -h_b, Vt, np.rad2deg(np.arctan2(w, u)), np.rad2deg(np.arctan2(v.Vt)), phi_a, theta_a, psi_m, p,
+             q, r])
 
         # ==================================================
         # Kalman Matrices
@@ -249,7 +255,8 @@ def estimator_loop(y, xh, servo):
         # ALL CODE ABOVE THIS LINE
         # ==================================================
         # DONE: Log X Hat, Servos, RCs, Y to CSV
-        f_logfile.write(', '.join(map(str, xh)) + ', ' + ', '.join(map(str, servo)) + ', ' + ', '.join(map(str, y)) + '\n')
+        f_logfile.write(
+            ', '.join(map(str, xh)) + ', ' + ', '.join(map(str, servo)) + ', ' + ', '.join(map(str, y)) + '\n')
         # >>> TDB
 
 
