@@ -228,14 +228,14 @@ def estimator_loop(y, xh, servo):
             #INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
             #UPDATED WITH ROTATION MATRIX
-        xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, accel_bias[0], accel_bias[1] ,accel_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]])
+        xh = np.array([phi_a, theta_a, psi_m, p_n, p_e, -h_b, u, v, w, p, q, r, accel_bias[0], accel_bias[1] ,accel_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]])
 
         # ==================================================
         # Kalman Matrices
         # POC: Ujjval
 
         # Create F Matix
-        F = F_Find(xh, [y[ax], y[ay], y[az], y[gyro_p], y[gyro_q], y[gyro_r]])
+        # F = F_Find(xh, [y[ax], y[ay], y[az], y[gyro_p], y[gyro_q], y[gyro_r]])
 
         # Create H Matix
         # >>> TBD by UJJVAL
@@ -336,21 +336,81 @@ def F_Find(xh, sn):
 
 
 def controller_loop(xh, servo, cmd):
+    deadband = 0.020
+
+    u_desired = None
+
+    throttle_cent_min = 0.05
+    throttle_cent_max = 1.00
+    throttle_pwm_min = 1.117
+    throttle_pwm_max = 1.921
+
+    aileron_pwm_trim = 1.480
+    aileron_pwm_min = 1.158
+    aileron_pwm_max = 1.84
+    aileron_deg_min = None
+    aileron_deg_max = None
+
+    elevator_pwm_trim = 1.482
+    elevator_pwm_min = 1.158
+    elevator_pwm_max = 1.84
+    elevator_deg_min = None
+    elevator_deg_max = None
+
+    rudder_pwm_trim = 1.518
+    rudder_pwm_min = 1.003
+    rudder_pwm_max = 2.037
+    rudder_deg_min = None
+    rudder_deg_max = None
+
     while True:
         if (servo[mode_flag] == 1):
-            pass  # rewrite servo_out values to servo array based on their previous values and xh.
+            k_lat = np.zeros((2, 4))
+            k_lon = np.zeros((2, 4))
+
+            # maintain airspeed when flipped to auto
+            # xh = np.array([phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, p, q, r, accel_bias, gyro_bias])
+            u_desired = xh[6]
+
+            xh_lon = np.array([xh[6], xh[8], xh[10], xh[1]])
+            xh_lat = np.array([xh[7], xh[9], xh[11], xh[0]])
+
+            # DONE: write wing leveler
+            phi_d = 0
+
+            # right now. When off stick, stabilize
+            if servo[rcin_1] > aileron_pwm_trim + deadband or servo[rcin_1] < aileron_pwm_trim - deadband:
+                servo[aileron] = servo[rcin_1]
+            else:
+                # TODO: Make this smarter
+                if (xh[0] - phi_d) < -2:
+                    servo[aileron] = 1.600
+                elif (xh[0] - phi_d) > 2:
+                    servo[aileron] = 1.400
+                else:
+                    servo[aileron] = aileron_pwm_trim
+            if servo[rcin_2] > elevator_pwm_trim + deadband or servo[rcin_2] < elevator_pwm_trim - deadband:
+                servo[elevator] = servo[rcin_2]
+            else:
+                pass  # do stabilize
+            if servo[rcin_3] > rudder_pwm_trim + deadband or servo[rcin_3] < rudder_pwm_trim - deadband:
+                servo[rudder] = servo[rcin_2]
+            else:
+                pass  # do stabilize
+
+            # rewrite servo_out values to servo array based on their previous values and xh.
             # if (servo[servo_1]<1.5): servo[servo_1] = 1.55
             # else: servo[servo_1] = 1.45
             # time.sleep(1)
             # Controller should assign values in range 1.25 to 1.75 to outputs;
             # WARNING, servo damage likely if values outside this range are assigned
             # Example: This is a manual passthrough function
-            servo[throttle] = servo[rcin_0]
-            servo[aileron] = servo[rcin_1]
-            servo[elevator] = servo[rcin_2]
-            servo[rudder] = servo[rcin_3]
-            servo[servo_4] = servo[servo_4]  # no servo; channel used for manual/auto switch
-            servo[flaps] = servo[rcin_5]
+            # servo[throttle] = servo[rcin_0]
+            # servo[aileron] = servo[rcin_1]
+            # servo[elevator] = servo[rcin_2]
+            # servo[rudder] = servo[rcin_3]
+            # servo[servo_4] = servo[servo_4]  # no servo; channel used for manual/auto switch
+            # servo[flaps] = servo[rcin_5]
 
 
 if __name__ == "__main__":
