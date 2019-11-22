@@ -146,7 +146,7 @@ def estimator_loop(y, xh, servo):
     # Logging Initialization
     # POC: Charlie
     now = datetime.now()
-    date_time = now.strftime('%y-%m-%d_%H:%M:%S')
+    date_time = now.strftime('%y_%m_%d__%H_%M_%S')
     os.chdir('/home/pi/')
     f_logfile = open('log_' + date_time + '.csv', 'w+')
     est_log_string = 'phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, a_bias_x, a_bias_y, a_bias_z, gyro_bias_x, gyro_bias_y, gyro_bias_z, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
