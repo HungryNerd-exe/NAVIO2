@@ -203,11 +203,9 @@ def estimator_loop(y, xh, servo):
 
         # Accept the rate gyro values
         # >>> UJJVAL CHECK HERE
-        p = y[gyro_p] - gyro_bias[0]
-        q = y[gyro_q] - gyro_bias[1]
+        q = y[gyro_p] - gyro_bias[0]
+        p = y[gyro_q] - gyro_bias[1]
         r = y[gyro_r] - gyro_bias[2]
-
-	[p, q, r][0] = -1*np.dot(R_imu, np.array([[p], [q], [r]]))
 
         if new_gps:
             [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
