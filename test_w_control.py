@@ -179,10 +179,11 @@ def estimator_loop(y, xh, servo):
         R_imu = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, 1]])
 
         # >>> UJJVAL CHECK HERE
-        [ax_rot, ay_rot, az_rot][0] = np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]]))
-        ax_rot = ax_rot - accel_bias[0]
-        ay_rot = ay_rot - accel_bias[1]
-        az_rot = az_rot - accel_bias[2]
+	print(np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]])))
+        a_rot = np.dot(R_imu, np.transpose([y[ax], y[ay], y[az]]))
+        ax_rot = a_rot[0] - accel_bias[0]
+        ay_rot = a_rot[1] - accel_bias[1]
+        az_rot = a_rot[2] - accel_bias[2]
 
         # Completing angular relations
         phi_a = np.arctan2(ay_rot, math.sqrt(ax_rot ** 2 + az_rot ** 2))  # Reliable
