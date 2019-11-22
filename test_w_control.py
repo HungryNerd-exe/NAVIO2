@@ -48,7 +48,9 @@ def estimator_loop(y, xh, servo):
     #Initialize Variables
     ax_rot = ay_rot = az_rot = 0
     v_n_old = v_e_old = v_d_old = 0
-    x = y = z = v_n = v_e = v_d = 0
+    x = y = z = 0
+    u = v = w = 0
+    v_n = v_e = v_d = 0
     v_n_dot = v_e_dot = v_d_dot = 0
 
     A = [[-0.028, 0.233, 0, -9.815, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -216,8 +218,16 @@ def estimator_loop(y, xh, servo):
             except:
                 [v_n_dot, v_e_dot, v_d_dot] = [0, 0, 0]
 
-        # TODO: need to define x without GPS. Initialize as zero before loop? -Charlie
+            Rbf = np.array([[cos(theta_a)*cos(psi_m), cos(theta_a)*sin(psi_m), -sin(theta_a)],
+                            [sin(phi_a)*sin(theta_a)*cos(psi_m) - cos(phi_a)*sin(psi_m), sin(phi_a)*sin(theta_a)*sin(psi_m) + cos(phi_a)*cos(psi_m), sin(phi_a)*cos(theta_a)]
+                            [cos(phi_a)*sin(theta_a)*cos(psi_m) + sin(phi_a)*sin(psi_m), cos(phi_a)*sin(theta_a)*sin(psi_m) - sin(phi_a)*cos(psi_m), cos(phi_a)*cos(theta_a)]])
+
+            [u, v, w][0] = np.dot(Rbf, np.array([[v_n], [v_e], [v_d]]))
+
+        # XTODO: need to define x without GPS. Initialize as zero before loop? -Charlie
+            #INITIALIZED BEFORE LOOP - BRANDON
         # TODO: need to define u, v, w. Not sure where those are comping from. -Charlie
+            #UPDATED WITH ROTATION MATRIX
         xh = np.array([phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, accel_bias, gyro_bias])
 
         # ==================================================
