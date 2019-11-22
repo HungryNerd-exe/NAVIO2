@@ -124,7 +124,7 @@ def estimator_loop(y, xh, servo):
         gyro = np.append(gyro, [m9g], axis=0)
         time.sleep(0.05)
     gyro_bias = [np.average(gyro[:, 0]), np.average(gyro[:, 1]), np.average(gyro[:, 2])]
-    accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])]
+    accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])-9.8]
 
     # >>> ADD IN COVARIANCE
     #sampled_data = np.array([[np.transpose(gyro[:,0])],
