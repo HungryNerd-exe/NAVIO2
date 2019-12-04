@@ -64,7 +64,7 @@ def estimator_loop(y,xh,servo):
     
     R_INS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]), 1, 1, 1, 1, 1, 1, 1, np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
     
-    R_AHRS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]), 1,np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
+    R_AHRS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]), 10,np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
     
     accel = 0
     gyro = 0
@@ -104,11 +104,12 @@ def estimator_loop(y,xh,servo):
         
         #Magnetic heading (psi_m)
         Rhb=np.array([[np.cos(xh_old[theta]), np.sin(xh_old[theta])*np.sin(xh_old[phi]), np.sin(xh_old[theta])*np.cos(xh_old[phi])], [0, np.cos(xh_old[phi]), -np.sin(xh_old[phi])], [-np.sin(xh_old[theta]), np.cos(xh_old[theta])*np.sin(xh_old[phi]), np.cos(xh_old[theta])*np.cos(xh_old[phi])]]) #rotation from body to horizontal plane
-              
+        #print(Rhb)
+
         magh=Rhb.dot(mag) #mag vector in horizontal plane components
-        
+
         psi_m = np.arctan2(magh[1], magh[0]) + declination
-        
+
         Rbf = np.array([[cos(xh_old[theta]) * cos(psi_m), cos(xh_old[theta]) * sin(psi_m), -sin(xh_old[theta])], [sin(xh_old[phi]) * sin(xh_old[theta]) * cos(psi_m) - cos(xh_old[phi]) * sin(psi_m),sin(xh_old[phi]) * sin(xh_old[theta]) * sin(psi_m) + cos(xh_old[phi]) * cos(psi_m), sin(xh_old[phi]) * cos(xh_old[theta])],[cos(xh_old[phi]) * sin(xh_old[theta]) * cos(psi_m) + sin(xh_old[phi]) * sin(psi_m), cos(xh_old[phi]) * sin(xh_old[theta]) * sin(psi_m) - sin(xh_old[phi]) * cos(psi_m), cos(xh_old[phi]) * cos(xh_old[theta])]]) #rotation from fixed to body frame
 
         #Pressure altitude  
