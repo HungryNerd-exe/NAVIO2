@@ -2,7 +2,8 @@
 
 from __future__ import print_function
 from pymavlink import mavutil
-import multiprocessing, timefrom datetime import datetime
+import multiprocessing, time
+from datetime import datetime
 from math import sin, cos, tan
 import numpy
 import os
@@ -10,7 +11,8 @@ import numpy as np
 import air
 
 # define indices of xh for easier access.
-x, y, z, vt, alpha, beta, phi, theta, psi, p, q, r = range(12)
+#x, yy, z, vt, alpha, beta, phi, theta, psi, p, q, r = range(12)
+phi, theta, psi, x, yy, z, V_n, V_e, V_d, p, q, r = range(12)
 
 # define indices of y for easier access.
 ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z = range(9)
@@ -42,13 +44,12 @@ def estimator_loop(y,xh,servo):
     #bias calculate
     print('WARNING! LEVEL AIRCRAFT UNTIL FURTHER NOTICE!')
     master.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_NOTICE, 'WARNING! LEVEL AIRCRAFT UNTIL FURTHER NOTICE!')
-    time.sleep(2)
     # Give 10 seconds of warmup
     t1 = time.time()
     gyro = np.array([[0, 0, 0]])
     accel = np.array([[0, 0, 0]])
     mag = np.array([[0, 0, 0]])
-    while time.time() - t1 < 10:
+    while time.time() - t1 < 1:
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
@@ -61,9 +62,9 @@ def estimator_loop(y,xh,servo):
     # Define Q here
     Q = np.eye(15)
     
-    R_INS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]),cov_x,cov_y,cov_z,cov_Vn,cov_Ve,cov_Vd,np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
+    R_INS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]), 1, 1, 1, 1, 1, 1, 1, np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
     
-    R_AHRS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]),cov.psi,np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
+    R_AHRS = np.diag([np.cov(accel[:, 0]),np.cov(accel[:, 1]),np.cov(accel[:, 2]), 1,np.cov(gyro[:, 0]),np.cov(gyro[:, 1]),np.cov(gyro[:, 2])])
     
     accel = 0
     gyro = 0
@@ -89,10 +90,12 @@ def estimator_loop(y,xh,servo):
         initialEstTime = time.time()
         new_gps = air.read_sensor(y,adc,imu,baro,ubl) # updates values in y
         #initiate
-        
-        if count = 0: 
-            xh_old = [0,0,psi_m,0,0,0,0,0,0,0,0,0] #todo check and verify
+
+        if count == 0:
+            tp = time.time()
+            xh_old = [0,0,0,0,0,0,0,0,0,0,0,0] #todo check and verify
             P_old = numpy.eye(len(xh))
+            v_n_old = v_e_old = 0
             
         #First compute sensor-specific estimates for imu/mag sensors
         #Raw sensor data needs to be rotated to stability axes
@@ -114,46 +117,49 @@ def estimator_loop(y,xh,servo):
     
         #=====ESTIMATOR CODE STARTS HERE==================================
         xh = xh_old
-        sn = np.array(acc,y[gyro_p]-gyro_bias[0],y[gyro_q]-gyro_bias[1],y[gyro_r]-gyro_bias[2])
+        sn = np.array([acc[0],acc[1],acc[2],y[gyro_p]-gyro_bias[0],y[gyro_q]-gyro_bias[1],y[gyro_r]-gyro_bias[2]])
         F = F_Find(xh, sn)
         P = P_old
         [xhminus, Phminus] = priori(xh, P, F, Q)
         
         #Handle GPS and then fuse all measurements
         if (new_gps):
-            [v_n_old, v_e_old, v_d_old] = [v_n, v_e, v_d]
-            [xh[x], xh[y], xh[z]] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d]]
-            [xh[u], xh[v], xh[w]] = np.dot(Rbf,np.array([[v_n], [v_e], [v_d]]))
-            zn = np.array([acc,psi_m, y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1],y[gyro_r]-gyro_bias[2]]) #todo check and make sure it is correct
+            [xh[x], xh[yy], xh[z]] = [y[gps_posn_n], y[gps_posn_e], y[gps_posn_d]]
+            [xh[V_n], xh[V_e], xh[V_d]] = np.dot(Rbf,np.array([y[gps_vel_n], y[gps_vel_n], y[gps_vel_n]]))
+            zn = np.array([acc[0], acc[1], acc[2], psi_m, y[gps_posn_n], y[gps_posn_e], y[gps_posn_d], y[gps_vel_n], y[gps_vel_n], y[gps_vel_n], y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1],y[gyro_r]-gyro_bias[2]]) #todo check and make sure it is correct
             H = H_Find_INS(xh, sn)
-            [xh, P] = posteriori(xhminus, Pminus, zn, H, R_INS) 
+            print('NEW GPS')
+            [xh, P] = posteriori(xhminus, Phminus, zn, H, R_INS)
       
         else:
-            zn = [y[ax], y[ay], y[az], np.arctan( y[mag_y], y[mag_x]), y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1], y[gyro_r]-gyro_bias[2]] #todo check and make sure it is correct
+            zn = np.array([y[ax], y[ay], y[az], np.arctan2( y[mag_y], y[mag_x]), y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1], y[gyro_r]-gyro_bias[2]]) #todo check and make sure it is correct
             H = H_Find_AHRS(xh, sn)
-            [xh, P] = posteriori(xhminus, Pminus, zn, H, R_AHRS)
+            [xh, P] = posteriori(xhminus, Phminus, zn, H, R_AHRS)
             
             xh[x] = xh[x] + round(time.time() - tp, 3) * v_n_old
-            xh[y] = xh[y] + round(time.time() - tp, 3) * v_e_old
+            xh[yy] = xh[yy] + round(time.time() - tp, 3) * v_e_old
             tp = time.time()
         #OUTPUT: write estimated values to the xh array--------------------------------------
         xh[z] = -h_b
         xh[psi] = psi_m
-        vt = (xh[u]**2+xh[v]**2+xh[w]**2)**(1/2)
+        vt = (xh[V_n]**2+xh[V_e]**2+xh[V_d]**2)**(1/2)
         xh_old = xh
         P_old = P
-        alpha = atan(xh[w]/xh[u])
-        beta = asin(xh[v]/vt)
+        alpha = numpy.arctan(xh[V_d]/xh[V_n])
+        if vt == 0:
+            beta = 0
+        else:
+            beta = numpy.arcsin(xh[V_e]/vt)
         [pe,qe,re]=np.dot(Rbf.T,[y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1], y[gyro_r]-gyro_bias[2]])
         
         # xhat for controller
-        xc = np.array(xh[x], xh[y], xh[z], vt, alpha, beta, xh[phi], xh[theta], xh[psi], pe, qe, re )
+        xc = np.array([xh[x], xh[yy], xh[z], vt, alpha, beta, xh[phi], xh[theta], xh[psi], pe, qe, re])
         
         # ==================================================
         # ALL CODE ABOVE THIS LINE
         # ==================================================
         # DONE: Log X Hat, Servos, RCs, Y to CSV
-        f_logfile.write(', '.join(map(str, xh)) + ', '.join(map(str, servo)) + ', '.join(map(str, y)) + '\n')
+        f_logfile.write(', '.join(map(str, xc)) + ', '.join(map(str, servo)) + ', '.join(map(str, y)) + '\n')
         # >>> TDB
         
         count = 1
@@ -193,6 +199,7 @@ def F_Find(xh, sn):
     # All Angles in RADIANS!
     phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r = xh
     ax,ay,az,wx,wy,wz = sn
+    g = 9.808
 
     F = np.array([[sin(phi) * tan(theta) * (-1*wz) - cos(phi) * tan(theta) * -1*wy,
                    - cos(phi) * (-1*wz) * (tan(theta) ** 2 + 1) - sin(phi) * (-1*wy) * (tan(theta) ** 2 + 1), 0, 0, 0,
@@ -237,11 +244,12 @@ def H_Find_INS(xh, sn):
     # All Angles in RADIANS!
     phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r = xh
     ax,ay,az,wx,wy,wz = sn
+    g = 9.808
 
     H = np.array([[0, g * cos(theta), 0, 0, 0, 0, 0, 0, 0, 0, V_d, V_e],
                   [-g * cos(phi) * cos(theta), g * sin(phi) * sin(theta), 0, 0, 0, 0, 0, 0, 0, -V_d, 0, -V_n],
-                  [g * cos(theta) * sin(phi), g * cos(phi) * sin(theta), 0, 0, 0, 0, 0, 0, 0, 0, V_e, V_n, 0],
-                  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                  [g * cos(theta) * sin(phi), g * cos(phi) * sin(theta), 0, 0, 0, 0, 0, 0, 0, V_e, V_n, 0],
+                  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
@@ -262,10 +270,11 @@ def H_Find_AHRS(xh, sn):
     # All Angles in RADIANS!
     phi, theta, psi, x, y, z, V_n, V_e, V_d, p, q, r = xh
     ax,ay,az,wx,wy,wz = sn
+    g = 9.808
 
-    H = np.array([[0, g * cos(theta), 0, 0, 0, 0, 0, 0, 0, 0, V_d, V_e],
-                  [-g * cos(phi) * cos(theta), g * sin(phi) * sin(theta), 0, 0, 0, 0, 0, 0, 0, -V_d, 0, -V_n],
-                  [g * cos(theta) * sin(phi), g * cos(phi) * sin(theta), 0, 0, 0, 0, 0, 0, 0, 0, V_e, V_n, 0],
+    H = np.array( [[0, g * cos(theta), 0, 0, 0, 0, 0, 0, 0, 0, V_d, V_e],
+                  [-1*g * cos(phi) * cos(theta), g*sin(phi)*sin(theta), 0, 0, 0, 0, 0, 0, 0, -V_d, 0, -V_n],
+                  [g*cos(theta)*sin(phi), g*cos(phi)*sin(theta), 0, 0, 0, 0, 0, 0, 0, V_e, V_n, 0],
                   [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -275,26 +284,26 @@ def H_Find_AHRS(xh, sn):
 
 def priori(xh, P, F, Q):
     # do not forget to initialize xh and P.
-    FT = F.T
-    Pminus = np.dot(np.dot(F, P), FT)
-    xhatminus = np.dot(F, xh)
+    import numpy as np
+    FT = np.transpose(F)
+    Pminus = np.matmul(np.matmul(F, P), FT)
+    xhatminus = np.matmul(F, xh)
     return xhatminus, Pminus
 
 
 def posteriori(xhatminus, Pminus, zn, H, R):
     ss = len(xhatminus)  # state space size
-    HT = H.T
+    HT = numpy.transpose(H)
     # calculate Kalman gain
-    Knumerator = dot(Pminus, HT)
-    Kdenominator = dot(dot(H, Pminus), HT) + R
-    K = dot(Knumerator, np.linalg.inv(Kdenominator))  # Kalman gain
-
-    residuals = y - dot(H, xhatminus)
-    xhat = xhatminus + dot(K, residuals)
-    one_minus_KC = numpy.eye(ss) - dot(K, H)
+    Knumerator = numpy.matmul(Pminus, HT)
+    Kdenominator = numpy.matmul(numpy.matmul(H, Pminus), HT) + R
+    K = numpy.matmul(Knumerator, np.linalg.inv(Kdenominator))  # Kalman gain
+    residuals = zn - numpy.matmul(H, xhatminus)
+    xhat = xhatminus + numpy.matmul(K, residuals)
+    one_minus_KC = numpy.eye(ss) - numpy.matmul(K, H)
 
     # compute a posteriori estimate of errors
-    P = dot(one_minus_KC, Pminus)
+    P = numpy.matmul(one_minus_KC, Pminus)
 
     return xhat, P
 
