@@ -407,10 +407,10 @@ def controller_loop(xh, servo, cmd):
                 # print('Adjust Aileron')
                 # print([xh[6], xh[6] - phi_d])
                 # TODO: Make this smarter
-                if (xh[6] - phi_d) < -0.07:
+                if (xh[6] - phi_d) < -0.06:
                     # print('Low')
                     servo[aileron] = 1.650
-                elif (xh[6] - phi_d) > 0.07:
+                elif (xh[6] - phi_d) > 0.06:
                     # print('High')
                     servo[aileron] = 1.350
                 else:
@@ -423,7 +423,7 @@ def controller_loop(xh, servo, cmd):
                 servo[rudder] = servo[rcin_3]
             else:
                 pass  # do stabilize
-
+	    servo[throttle] = servo[rcin_0]
             # rewrite servo_out values to servo array based on their previous values and xh.
             # if (servo[servo_1]<1.5): servo[servo_1] = 1.55
             # else: servo[servo_1] = 1.45
