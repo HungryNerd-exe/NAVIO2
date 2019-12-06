@@ -76,7 +76,8 @@ def estimator_loop(y,xh,servo):
     date_time = now.strftime('%y-%m-%d_%H:%M:%S')
     os.chdir('/home/pi/')
     f_logfile = open('log_' + date_time + '.csv', 'w+')
-    est_log_string = 'phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, accel_bias, gyro_bias, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
+    #est_log_string = 'phi_a, theta_a, psi_m, x, y, -h_b, u, v, w, accel_bias, gyro_bias, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
+    est_log_string = 'x, y, z, Vt, alpha, beta, phi, theta, psi, pe, qe, re, rcin_0, rcin_1, rcin_2, rcin_3, rcin_4, rcin_5, servo_0, servo_1, servo_2, servo_3, servo_4, servo_5, ax, ay, az, gyro_p, gyro_q, gyro_r, mag_x, mag_y, mag_z, pres_baro, gps_posn_n, gps_posn_e, gps_posn_d, gps_vel_n, gps_vel_e, gps_vel_d\n'
     f_logfile.write(est_log_string)
     # =========================================================================
 
@@ -137,20 +138,20 @@ def estimator_loop(y,xh,servo):
             H = H_Find_AHRS(xh, sn)
             [xh, P] = posteriori(xhminus, Phminus, zn, H, R_AHRS)
             
-            xh[x] = xh[x] + round(time.time() - tp, 3) * v_n_old
-            xh[yy] = xh[yy] + round(time.time() - tp, 3) * v_e_old
+            xh[x] = xh[x] + round(time.time() - tp, 3) * y[gps_vel_n]
+            xh[yy] = xh[yy] + round(time.time() - tp, 3) * y[gps_vel_e]
             tp = time.time()
         #OUTPUT: write estimated values to the xh array--------------------------------------
         xh[z] = -h_b
         xh[psi] = psi_m
-        vt = (xh[V_n]**2+xh[V_e]**2+xh[V_d]**2)**(1/2)
+        vt = (y[gps_vel_n]**2+y[gps_vel_e]**2+y[gps_vel_d]**2)**(1/2)
         xh_old = xh
         P_old = P
-        alpha = numpy.arctan(xh[V_d]/xh[V_n])
+        alpha = numpy.arctan(y[gps_vel_d]/y[gps_vel_n])
         if vt == 0:
             beta = 0
         else:
-            beta = numpy.arcsin(xh[V_e]/vt)
+            beta = numpy.arcsin(y[gps_vel_n]/vt)
         [pe,qe,re]=np.dot(Rbf.T,[y[gyro_p]-gyro_bias[0], y[gyro_q]-gyro_bias[1], y[gyro_r]-gyro_bias[2]])
         
         # xhat for controller
