@@ -53,12 +53,12 @@ def estimator_loop(y, xh, servo):
     gyro = np.array([[0, 0, 0]])
     accel = np.array([[0, 0, 0]])
     mag = np.array([[0, 0, 0]])
-    while time.time() - t1 < 1:
+    while time.time() - t1 < 10:
         m9a, m9g, m9m = imu.getMotion9()
         accel = np.append(accel, [m9a], axis=0)
         gyro = np.append(gyro, [m9g], axis=0)
         mag = np.append(mag, [m9m], axis=0)
-        time.sleep(0.05)
+        time.sleep(0.1)
     gyro_bias = [np.average(gyro[:, 0]), np.average(gyro[:, 1]), np.average(gyro[:, 2])]
     accel_bias = [np.average(accel[:, 0]), np.average(accel[:, 1]), np.average(accel[:, 2])]
     mag_bias = [np.average(mag[:, 0]), np.average(mag[:, 1]), np.average(mag[:, 2])]
@@ -168,7 +168,12 @@ def estimator_loop(y, xh, servo):
         # OUTPUT: write estimated values to the xh array--------------------------------------
         xh_new[z] = -h_b
         xh_new[psi] = psi_m
-        vt = (y[gps_vel_n] ** 2 + y[gps_vel_e] ** 2 + y[gps_vel_d] ** 2) ** (1 / 2)
+        vt = np.sqrt(y[gps_vel_n]**2 + y[gps_vel_e]**2 + y[gps_vel_d]**2)
+        print('NORTH: ' + str(y[gps_vel_n]))
+        print('EAST: ' + str(y[gps_vel_e]))
+        print('DOWN: ' + str(y[gps_vel_d]))
+        print('MAGNITUDE: ' + str(vt))
+        print(np.sqrt(y[gps_vel_n]**2 + y[gps_vel_e]**2 + y[gps_vel_d]**2))
         xh_old = xh_new
         P_old = P
         try:
@@ -211,6 +216,7 @@ def estimator_loop(y, xh, servo):
 
 
 def controller_loop(xh, servo, cmd):
+    time.sleep(10)
     AP_off = True
 
     throttle_cent_min = 0.05
@@ -230,31 +236,45 @@ def controller_loop(xh, servo, cmd):
     rudder_pwm_min = 1.003
     rudder_pwm_max = 2.037
 
+    count_rudder_max = 0
+
     while True:
         if (servo[mode_flag] == 1):
-            if AP_off:
+            if AP_off or count_rudder_max == 20:
                 AP_off = False
                 rc_old = [servo[rcin_0], servo[rcin_1], servo[rcin_2], servo[rcin_3]]
-                x_old = xh
+                #print(rc_old)
+		x_old = np.copy(xh)
+                #print(','.join(map(str,x_old)))
                 servo[throttle] = servo[rcin_0]
                 servo[aileron] = servo[rcin_1]
                 servo[elevator] = servo[rcin_2]
                 servo[rudder] = servo[rcin_3]
+                count_rudder_max = 0
+
+            print('Phi: ' + str(xh[6]))
+            print('Theta: ' + str(xh[7]))
+            print('Psi: ' + str(xh[8]))
 
             # maintain airspeed when flipped to auto
             # xh = np.array([x, y, z, Vt, alpha, beta, phi, theta, psi, p, q, r])
             # x, y, z, vt, alpha, beta, phi, theta, psi, p, q, r
-            if servo[rcin_0] != rc_old[0]:
+
+#            if servo[rcin_0] != rc_old[0]:
+            if abs(round(servo[rcin_0],1) - round(rc_old[0],1)) > 0:
                 servo[throttle] = servo[rcin_0]
                 AP_off = True
+                print('AP Reset - Throttle')
             else:
                 try:
                     dif_u = 2*(xh[3] - x_old[3])/(xh[3] + x_old[3])
+                    #print('Velocity: ' + str(dif_u))
                     if dif_u > 0.075:
                         if servo[throttle] - 0.04 > throttle_pwm_min:
                             servo[throttle] -= 0.04
                         else:
                             servo[throttle] = throttle_pwm_min
+                            count_rudder_max += 1
                     elif dif_u < -0.075:
                         if servo[throttle] + 0.04 < throttle_pwm_max:
                             servo[throttle] += 0.04
@@ -263,18 +283,21 @@ def controller_loop(xh, servo, cmd):
                 except:
                     pass
 
-            if servo[rcin_1] != rc_old[1]:
+#            if servo[rcin_1] != rc_old[1]:
+            if abs(round(servo[rcin_1],1) - round(rc_old[1],1)) > 0:
                 servo[aileron] = servo[rcin_1]
                 AP_off = True
+                print('AP Reset - Ailerons')
             else:
                 try:
-                    dif_phi = 2*(xh[6] - x_old[6])/(xh[6] + x_old[6])
-                    if dif_phi > 0.075:
+		    dif_phi = 2*(xh[6] - x_old[6])/(xh[6] + x_old[6])
+                    #print('Phi: ' + str(dif_phi))
+                    if dif_phi > 0.20:
                         if servo[aileron] - 0.04 > aileron_pwm_min:
                             servo[aileron] -= 0.04
                         else:
                             servo[aileron] = aileron_pwm_min
-                    elif dif_phi < -0.075:
+                    elif dif_phi < -0.20:
                         if servo[aileron] + 0.04 < aileron_pwm_max:
                             servo[aileron] += 0.04
                         else:
@@ -282,18 +305,22 @@ def controller_loop(xh, servo, cmd):
                 except:
                     pass
 
-            if servo[rcin_2] != rc_old[2]:
+#            if servo[rcin_2] != rc_old[2]:
+            
+            if abs(round(servo[rcin_2],1) - round(rc_old[2],1)) > 0:
                 servo[elevator] = servo[rcin_2]
                 AP_off = True
+                print('AP Reset - Elevator')
             else:
                 try:
                     dif_theta = 2*(xh[7] - x_old[7])/(xh[7] + x_old[7])
-                    if dif_theta > 0.075:
+                    #print('Psi: ' + str(x_old[7]) + ' '+ str(xh[7]) + ' ' + str(dif_theta))
+                    if dif_theta > 0.02:
                         if servo[elevator] - 0.04 > elevator_pwm_min:
                             servo[elevator] -= 0.04
                         else:
                             servo[elevator] = elevator_pwm_min
-                    elif dif_theta < -0.075:
+                    elif dif_theta < -0.02:
                         if servo[elevator] + 0.04 < elevator_pwm_max:
                             servo[elevator] += 0.04
                         else:
@@ -301,31 +328,39 @@ def controller_loop(xh, servo, cmd):
                 except:
                     pass
 
-            if servo[rcin_3] != rc_old[3]:
-                servo[rudder] = servo[rcin_3]
-                AP_off = True
-            else:
-                try:
-                    dif_psi = 2*(xh[8] - x_old[8])/(xh[8] + x_old[8])
-                    if dif_psi > 0.075:
-                        if servo[rudder] - 0.04 > rudder_pwm_min:
-                            servo[rudder] -= 0.04
-                        else:
-                            servo[rudder] = rudder_pwm_min
-                    elif dif_psi < -0.075:
-                        if servo[rudder] + 0.04 < rudder_pwm_max:
-                            servo[rudder] += 0.04
-                        else:
-                            servo[rudder] = rudder_pwm_max
-                except:
-                    pass
+#            if servo[rcin_3] != rc_old[3]:
+#            if abs(round(servo[rcin_3] - rc_old[3],0)) > 0:
+#                servo[rudder] = servo[rcin_3]
+#                AP_off = True
+#                print('AP Reset - Rudder')
+#            else:
+#                try:
+#                    dif_psi = 2*(xh[8] - x_old[8])/(xh[8] + x_old[8])
+#                    #print('Psi: ' + str(x_old[8]) + ' '+ str(xh[8]) + ' ' + str(dif_psi))
+#                    if dif_psi > 1:
+#                        if servo[rudder] - 0.04 > rudder_pwm_min:
+#                            servo[rudder] -= 0.04
+#                        else:
+#                            servo[rudder] = rudder_pwm_min
+#                            count_rudder_max += 1
+#                    elif dif_psi < -1:
+#                        if servo[rudder] + 0.04 < rudder_pwm_max:
+#                            servo[rudder] += 0.04
+#                        else:
+#                            servo[rudder] = rudder_pwm_max
+#                            count_rudder_max += 1
+#                except:
+#                    pass
+
+            servo[rudder] = servo[rcin_3]
 
             if not AP_off:
-                time.sleep(0.25)
-                print('Throttle: ' + str(servo[throttle]))
-                print('Aileron: ' + str(servo[aileron]))
-                print('Elevator: ' + str(servo[elevator]))
-                print('Rudder: ' + str(servo[rudder]))
+                time.sleep(0.2)
+                #print('Throttle: ' + str(servo[throttle]))
+                #print('Aileron: ' + str(servo[aileron]))
+                #print('Elevator: ' + str(servo[elevator]))
+                #print('Rudder: ' + str(servo[rudder]))
+                #print(' ')
         else:
             if not AP_off:
                 AP_off = True
