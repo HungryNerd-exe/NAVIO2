@@ -248,65 +248,77 @@ def controller_loop(xh, servo, cmd):
                 servo[throttle] = servo[rcin_0]
                 AP_off = True
             else:
-                dif_u = 2*(xh[3] - x_old[3])/(xh[3] + x_old[3])
-                if dif_u > 0.075:
-                    if servo[throttle] - 0.04 > throttle_pwm_min:
-                        servo[throttle] -= 0.04
-                    else:
-                        servo[throttle] = throttle_pwm_min
-                elif dif_u < -0.075:
-                    if servo[throttle] + 0.04 < throttle_pwm_max:
-                        servo[throttle] += 0.04
-                    else:
-                        servo[throttle] = throttle_pwm_max
+                try:
+                    dif_u = 2*(xh[3] - x_old[3])/(xh[3] + x_old[3])
+                    if dif_u > 0.075:
+                        if servo[throttle] - 0.04 > throttle_pwm_min:
+                            servo[throttle] -= 0.04
+                        else:
+                            servo[throttle] = throttle_pwm_min
+                    elif dif_u < -0.075:
+                        if servo[throttle] + 0.04 < throttle_pwm_max:
+                            servo[throttle] += 0.04
+                        else:
+                            servo[throttle] = throttle_pwm_max
+                except:
+                    pass
 
             if servo[rcin_1] != rc_old[1]:
                 servo[aileron] = servo[rcin_1]
                 AP_off = True
             else:
-                dif_phi = 2*(xh[6] - x_old[6])/(xh[6] + x_old[6])
-                if dif_phi > 0.075:
-                    if servo[aileron] - 0.04 > aileron_pwm_min:
-                        servo[aileron] -= 0.04
-                    else:
-                        servo[aileron] = aileron_pwm_min
-                elif dif_phi < -0.075:
-                    if servo[aileron] + 0.04 < aileron_pwm_max:
-                        servo[aileron] += 0.04
-                    else:
-                        servo[aileron] = aileron_pwm_max
+                try:
+                    dif_phi = 2*(xh[6] - x_old[6])/(xh[6] + x_old[6])
+                    if dif_phi > 0.075:
+                        if servo[aileron] - 0.04 > aileron_pwm_min:
+                            servo[aileron] -= 0.04
+                        else:
+                            servo[aileron] = aileron_pwm_min
+                    elif dif_phi < -0.075:
+                        if servo[aileron] + 0.04 < aileron_pwm_max:
+                            servo[aileron] += 0.04
+                        else:
+                            servo[aileron] = aileron_pwm_max
+                except:
+                    pass
 
             if servo[rcin_2] != rc_old[2]:
                 servo[elevator] = servo[rcin_2]
                 AP_off = True
             else:
-                dif_phi = 2*(xh[7] - x_old[7])/(xh[7] + x_old[7])
-                if dif_phi > 0.075:
-                    if servo[elevator] - 0.04 > elevator_pwm_min:
-                        servo[elevator] -= 0.04
-                    else:
-                        servo[elevator] = elevator_pwm_min
-                elif dif_phi < -0.075:
-                    if servo[elevator] + 0.04 < elevator_pwm_max:
-                        servo[elevator] += 0.04
-                    else:
-                        servo[elevator] = elevator_pwm_max
+                try:
+                    dif_theta = 2*(xh[7] - x_old[7])/(xh[7] + x_old[7])
+                    if dif_theta > 0.075:
+                        if servo[elevator] - 0.04 > elevator_pwm_min:
+                            servo[elevator] -= 0.04
+                        else:
+                            servo[elevator] = elevator_pwm_min
+                    elif dif_theta < -0.075:
+                        if servo[elevator] + 0.04 < elevator_pwm_max:
+                            servo[elevator] += 0.04
+                        else:
+                            servo[elevator] = elevator_pwm_max
+                except:
+                    pass
 
             if servo[rcin_3] != rc_old[3]:
                 servo[rudder] = servo[rcin_3]
                 AP_off = True
             else:
-                dif_phi = 2*(xh[8] - x_old[8])/(xh[8] + x_old[8])
-                if dif_phi > 0.075:
-                    if servo[rudder] - 0.04 > rudder_pwm_min:
-                        servo[rudder] -= 0.04
-                    else:
-                        servo[rudder] = rudder_pwm_min
-                elif dif_phi < -0.075:
-                    if servo[rudder] + 0.04 < rudder_pwm_max:
-                        servo[rudder] += 0.04
-                    else:
-                        servo[rudder] = rudder_pwm_max
+                try:
+                    dif_psi = 2*(xh[8] - x_old[8])/(xh[8] + x_old[8])
+                    if dif_psi > 0.075:
+                        if servo[rudder] - 0.04 > rudder_pwm_min:
+                            servo[rudder] -= 0.04
+                        else:
+                            servo[rudder] = rudder_pwm_min
+                    elif dif_psi < -0.075:
+                        if servo[rudder] + 0.04 < rudder_pwm_max:
+                            servo[rudder] += 0.04
+                        else:
+                            servo[rudder] = rudder_pwm_max
+                except:
+                    pass
 
             if not AP_off:
                 time.sleep(0.25)
