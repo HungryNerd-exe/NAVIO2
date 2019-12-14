@@ -169,11 +169,11 @@ def estimator_loop(y, xh, servo):
         xh_new[z] = -h_b
         xh_new[psi] = psi_m
         vt = np.sqrt(y[gps_vel_n]**2 + y[gps_vel_e]**2 + y[gps_vel_d]**2)
-        print('NORTH: ' + str(y[gps_vel_n]))
-        print('EAST: ' + str(y[gps_vel_e]))
-        print('DOWN: ' + str(y[gps_vel_d]))
-        print('MAGNITUDE: ' + str(vt))
-        print(np.sqrt(y[gps_vel_n]**2 + y[gps_vel_e]**2 + y[gps_vel_d]**2))
+        #print('NORTH: ' + str(y[gps_vel_n]))
+        #print('EAST: ' + str(y[gps_vel_e]))
+        #print('DOWN: ' + str(y[gps_vel_d]))
+        #print('MAGNITUDE: ' + str(vt))
+        #print(np.sqrt(y[gps_vel_n]**2 + y[gps_vel_e]**2 + y[gps_vel_d]**2))
         xh_old = xh_new
         P_old = P
         try:
